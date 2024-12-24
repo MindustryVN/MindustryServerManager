@@ -36,6 +36,7 @@ public class SecurityConfig {
         http // Since we r using REST csrf are not needed
                 .csrf(csrf -> csrf.disable())//
                 .cors(cors -> cors.configurationSource(source))//
+                .formLogin(login -> login.disable())//
                 .httpBasic(httpBasic -> httpBasic.disable());
 
         return http.build();
