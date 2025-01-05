@@ -1,4 +1,4 @@
-package mindustrytool.servermanager;
+package mindustrytool.servermanager.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.codec.ServerCodecConfigurer;
