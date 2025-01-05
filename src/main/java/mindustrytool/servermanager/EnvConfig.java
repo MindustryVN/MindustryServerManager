@@ -11,7 +11,10 @@ public record EnvConfig(//
 ) {
     public static record DockerEnv(//
             @NotBlank String mindustryServerImage, //
-            String serverDataFolder) {
+            String serverDataFolder, //
+            String authToken, //
+            String username//
+    ) {
     }
 
     public static record ServerConfig(//

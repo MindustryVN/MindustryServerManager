@@ -1,10 +1,11 @@
 package mindustrytool.servermanager.service;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
-import com.github.dockerjava.api.async.ResultCallback;
-import com.github.dockerjava.api.model.PullResponseItem;
+import com.github.dockerjava.api.model.AuthConfig;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -22,27 +23,37 @@ public class DockerService {
 
     @PostConstruct
     void init() throws InterruptedException {
-        // Check for volume
-        boolean volumeExists = dockerClient.listVolumesCmd().exec().getVolumes().stream().allMatch(volume -> volume.getName().equals(Config.DOCKER_DATA_COLUMN_NAME));
+        boolean volumeExists = dockerClient.listVolumesCmd()//
+                .exec()//
+                .getVolumes()//
+                .stream()//
+                .anyMatch(volume -> volume.getName().equals(Config.DOCKER_DATA_VOLUME_NAME));
 
         if (!volumeExists) {
-            log.info("Volume not exits, creating new volume with name: " + Config.DOCKER_DATA_COLUMN_NAME);
+            log.info("Volume not exits, creating new volume with name: " + Config.DOCKER_DATA_VOLUME_NAME);
 
             dockerClient.createVolumeCmd()//
-                    .withName(Config.DOCKER_DATA_COLUMN_NAME)//
-                    .withDriver("bridge")//
+                    .withName(Config.DOCKER_DATA_VOLUME_NAME)//
                     .exec();
 
             log.info("Volume created");
         }
 
-        boolean imageExists = dockerClient.listImagesCmd().exec().stream().allMatch(image -> image.getId().equals(envConfig.docker().mindustryServerImage()));
+        boolean imageExists = dockerClient.listImagesCmd()//
+                .exec()//
+                .stream()//
+                .anyMatch(image -> List.of(image.getRepoTags()).contains(envConfig.docker().mindustryServerImage()));
 
         if (!imageExists) {
-            var resultCallback = new ResultCallback.Adapter<PullResponseItem>();
-            dockerClient.pullImageCmd(envConfig.docker().mindustryServerImage()).exec(resultCallback);
+            log.info("Image not exits, pulling image with name: " + envConfig.docker().mindustryServerImage());
+            dockerClient.pullImageCmd(envConfig.docker().mindustryServerImage())//
+                    .withAuthConfig(new AuthConfig()//
+                            .withUsername(envConfig.docker().username())//
+                            .withIdentityToken(envConfig.docker().authToken()))
+                    .start()//
+                    .awaitCompletion();
 
-            resultCallback.awaitCompletion();
+            log.info("Image pulled");
         }
 
     }
