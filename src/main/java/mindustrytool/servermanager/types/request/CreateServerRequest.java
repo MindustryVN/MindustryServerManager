@@ -37,7 +37,7 @@ public class CreateServerRequest {
     private String mode;
 
     @Length(max = 256)
-    private String startCommand;
+    private String hostCommand;
 
     private int port;
 }
