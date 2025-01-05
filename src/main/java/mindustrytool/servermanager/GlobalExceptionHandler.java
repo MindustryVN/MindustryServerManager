@@ -1,4 +1,4 @@
-package mindustrytool.mindustrycontentparser;
+package mindustrytool.servermanager;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,8 +13,8 @@ import org.springframework.web.server.ServerWebExchange;
 import io.netty.resolver.dns.DnsNameResolverTimeoutException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import mindustrytool.mindustrycontentparser.types.response.ErrorResponse;
-import mindustrytool.mindustrycontentparser.utils.ApiError;
+import mindustrytool.servermanager.types.response.ErrorResponse;
+import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Mono;
 
 @Slf4j

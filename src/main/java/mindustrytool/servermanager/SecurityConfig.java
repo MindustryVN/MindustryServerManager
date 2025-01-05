@@ -1,4 +1,4 @@
-package mindustrytool.mindustrycontentparser;
+package mindustrytool.servermanager;
 
 import java.time.Duration;
 import org.springframework.context.annotation.Bean;

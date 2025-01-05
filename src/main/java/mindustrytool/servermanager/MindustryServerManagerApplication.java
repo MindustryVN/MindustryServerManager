@@ -1,4 +1,4 @@
-package mindustrytool.mindustrycontentparser;
+package mindustrytool.servermanager;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

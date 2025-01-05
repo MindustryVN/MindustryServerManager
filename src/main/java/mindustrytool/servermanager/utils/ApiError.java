@@ -1,4 +1,4 @@
-package mindustrytool.mindustrycontentparser.utils;
+package mindustrytool.servermanager.utils;
 
 
 import org.springframework.http.HttpStatus;

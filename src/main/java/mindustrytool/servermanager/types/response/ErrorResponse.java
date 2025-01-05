@@ -1,4 +1,4 @@
-package mindustrytool.mindustrycontentparser.types.response;
+package mindustrytool.servermanager.types.response;
 
 import java.io.Serializable;
 import java.util.Date;
