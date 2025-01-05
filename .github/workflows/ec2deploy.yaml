@@ -22,5 +22,4 @@ jobs:
         with:
           context: ./
           push: true
-          dockerfile: ./Dockerfile
           tags: ghcr.io/mindustryvn/mindustry-server-manager:latest
