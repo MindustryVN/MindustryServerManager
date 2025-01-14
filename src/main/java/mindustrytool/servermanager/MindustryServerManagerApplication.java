@@ -11,5 +11,4 @@ public class MindustryServerManagerApplication {
     public static void main(String[] args) {
         SpringApplication.run(MindustryServerManagerApplication.class, args);
     }
-
 }
