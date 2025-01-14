@@ -64,7 +64,7 @@ public class GlobalExceptionHandler {
         var request = exchange.getRequest();
 
         if (response.isCommitted()) {
-            return Mono.error(exception);
+            return Mono.empty();
         }
 
         Mono<String> urlMono = Mono.just(request)//
