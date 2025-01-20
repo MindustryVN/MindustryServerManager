@@ -18,7 +18,9 @@ public record EnvConfig(//
     }
 
     public static record ServerConfig(//
-            Boolean autoPortAssign //
+            Boolean autoPortAssign, //
+            String accessToken, //
+            String securityKey//
     ) {
     }
 }

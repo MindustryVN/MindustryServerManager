@@ -28,6 +28,7 @@ public class Utils {
             throw new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Unable to write image to bytes");
         }
     }
+    
 
     public static Mono<byte[]> readAllBytes(FilePart file) {
         return DataBufferUtils.join(file.content()).handle((buffer, sink) -> {

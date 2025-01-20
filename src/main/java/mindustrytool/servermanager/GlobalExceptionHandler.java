@@ -87,7 +87,7 @@ public class GlobalExceptionHandler {
                             .url(url)//
                             .build();
 
-                    if (status.value() >= 200) {
+                    if (status.value() >= 500) {
                         exception.printStackTrace();
                     }
 
