@@ -115,6 +115,7 @@ public class SecurityFilter implements WebFilter {
                 .getSubject();
 
         try {
+            log.info(data);
             return objectMapper.readValue(data, ServerManagerJwt.class);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
