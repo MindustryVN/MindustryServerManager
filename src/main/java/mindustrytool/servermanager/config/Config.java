@@ -1,5 +1,7 @@
 package mindustrytool.servermanager.config;
 
+import java.io.File;
+
 import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,12 +17,23 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import jakarta.annotation.PostConstruct;
+
 @Configuration
 public class Config implements WebFluxConfigurer {
 
     public static String DOCKER_DATA_VOLUME_NAME = "MINDUSTRY_SERVER_DATA";
+
     public static int DEFAULT_MINDUSTRY_SERVER_PORT = 6567;
     public static int MAXIMUM_MINDUSTRY_SERVER_PORT = 20000;
+
+    public static String volumeFolderPath = "/data";
+    public static File volumeFolder = new File(volumeFolderPath);
+
+    @PostConstruct
+    public void init() {
+        volumeFolder.mkdirs();
+    }
 
     @Override
     public void configureHttpMessageCodecs(@SuppressWarnings("null") ServerCodecConfigurer configurer) {
@@ -43,10 +56,7 @@ public class Config implements WebFluxConfigurer {
                         .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)//
                         .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)//
                         .setSerializationInclusion(JsonInclude.Include.NON_NULL)//
-                        .registerModule(module)//
-                        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)//
-                        .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)//
-                        .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+                        .registerModule(module);
     }
 
 }

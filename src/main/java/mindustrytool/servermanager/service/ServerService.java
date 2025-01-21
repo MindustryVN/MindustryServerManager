@@ -1,11 +1,13 @@
 package mindustrytool.servermanager.service;
 
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
@@ -16,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.types.data.MindustryServer;
-import mindustrytool.servermanager.types.request.CreateServerRequest;
+import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Flux;
@@ -59,7 +61,12 @@ public class ServerService {
         return Flux.fromIterable(servers.values()).map(server -> modelMapper.map(server, ServerDto.class));
     }
 
-    public Mono<ServerDto> createServer(CreateServerRequest request) {
+    public Mono<ServerDto> initServer(InitServerRequest request) {
+        if (servers.containsKey(request.getId())) {
+            var server = servers.get(request.getId());
+            return Mono.just(modelMapper.map(server, ServerDto.class));
+        }
+
         if (request.getPort() == 0 && !envConfig.serverConfig().autoPortAssign()) {
             return ApiError.badRequest("Port must be specified or autoPortAssign must be on");
         }
@@ -99,5 +106,9 @@ public class ServerService {
         }
 
         return Mono.empty();
+    }
+
+    public Mono<Void> createFile(UUID serverId, FilePart file) {
+        return file.transferTo(Paths.get(Config.volumeFolderPath, "servers", serverId.toString()));
     }
 }
