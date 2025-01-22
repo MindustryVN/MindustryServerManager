@@ -1,8 +1,5 @@
 package mindustrytool.servermanager.filter;
 
-import java.time.Duration;
-import java.time.Instant;
-
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
@@ -57,7 +54,11 @@ public class SecurityFilter implements WebFilter {
     @SuppressWarnings("null")
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
-        var start = Instant.now();
+        String uri = exchange.getRequest().getURI().getPath();
+
+        if (uri.isEmpty() || uri.equals("/")) {
+            return chain.filter(exchange);
+        }
 
         String securityKey = envConfig.serverConfig().securityKey();
 
@@ -81,30 +82,7 @@ public class SecurityFilter implements WebFilter {
 
         var data = getDataFromToken(token, securityKey);
 
-        return chain.filter(exchange).contextWrite(withRequest(Mono.just(data))).doOnTerminate(() -> {
-            var request = exchange.getRequest();
-            String requestUrl = request.getURI().toString();
-            var status = exchange.getResponse().getStatusCode();
-            var method = request.getMethod();
-            var duration = Duration.between(start, Instant.now()).toMillis();
-            var color = duration < 50 //
-                    ? "green"
-                    : duration < 200//
-                            ? "yellow"
-                            : "red";
-
-            var statusColor = status == null //
-                    ? "red"
-                    : status.value() < 300 //
-                            ? "green"
-                            : status.value() < 400 //
-                                    ? "blue"
-                                    : status.value() < 500//
-                                            ? "yellow"
-                                            : "red";
-
-            log.info("[[%s]%dms[white]] [[%s]%s[white]] %s %s".formatted(color, duration, statusColor, status == null ? "Unknown" : status.value(), method.toString().toUpperCase(), requestUrl));
-        });
+        return chain.filter(exchange).contextWrite(withRequest(Mono.just(data)));
     }
 
     public ServerManagerJwt getDataFromToken(String token, String secret) {
@@ -115,7 +93,6 @@ public class SecurityFilter implements WebFilter {
                 .getSubject();
 
         try {
-            log.info(data);
             return objectMapper.readValue(data, ServerManagerJwt.class);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);

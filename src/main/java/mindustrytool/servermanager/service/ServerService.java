@@ -1,5 +1,6 @@
 package mindustrytool.servermanager.service;
 
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.types.data.MindustryServer;
+import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.utils.ApiError;
@@ -80,8 +82,9 @@ public class ServerService {
         if (!containers.isEmpty()) {
             var result = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
                     .withName(request.getId().toString())//
+                    .withEnv("SERVER_ID=%s".formatted(request.getId().toString()))//
                     .withExposedPorts(ExposedPort.parse(port + ":" + Config.DEFAULT_MINDUSTRY_SERVER_PORT))//
-                    .withVolumes(Volume.parse(Map.of(Config.DOCKER_DATA_VOLUME_NAME, request.getId().toString())))//
+                    .withVolumes(Volume.parse(Map.of(Config.DOCKER_DATA_VOLUME_NAME, Paths.get(Config.volumeFolderPath, "servers", request.getId().toString()).toString())))//
                     .exec();
 
             containerId = result.getId();
@@ -98,6 +101,10 @@ public class ServerService {
         return Mono.just(modelMapper.map(server, ServerDto.class));
     }
 
+    public Mono<Void> hostServer(HostServerRequest request) {
+        return Mono.empty();
+    }
+
     public Mono<Void> stopServer(UUID serverId) {
         MindustryServer server = servers.get(serverId);
 
@@ -108,7 +115,17 @@ public class ServerService {
         return Mono.empty();
     }
 
-    public Mono<Void> createFile(UUID serverId, FilePart file) {
-        return file.transferTo(Paths.get(Config.volumeFolderPath, "servers", serverId.toString()));
+    public Mono<Void> createFile(UUID serverId, FilePart file, String path) {
+        return file.transferTo(Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), path));
+    }
+
+    public Mono<Void> deleteFile(UUID serverId, String path) {
+        var file = new File(Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), path).toString());
+
+        if (file.exists()) {
+            file.delete();
+        }
+
+        return Mono.empty();
     }
 }
