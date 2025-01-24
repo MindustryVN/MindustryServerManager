@@ -11,7 +11,6 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
-import mindustrytool.servermanager.config.Config;
 
 @Slf4j
 @Service
@@ -23,22 +22,6 @@ public class DockerService {
 
     @PostConstruct
     void init() throws InterruptedException {
-        boolean volumeExists = dockerClient.listVolumesCmd()//
-                .exec()//
-                .getVolumes()//
-                .stream()//
-                .anyMatch(volume -> volume.getName().equals(Config.DOCKER_DATA_VOLUME_NAME));
-
-        if (!volumeExists) {
-            log.info("Volume not exits, creating new volume with name: " + Config.DOCKER_DATA_VOLUME_NAME);
-
-            dockerClient.createVolumeCmd()//
-                    .withName(Config.DOCKER_DATA_VOLUME_NAME)//
-                    .exec();
-
-            log.info("Volume created");
-        }
-
         boolean imageExists = dockerClient.listImagesCmd()//
                 .exec()//
                 .stream()//

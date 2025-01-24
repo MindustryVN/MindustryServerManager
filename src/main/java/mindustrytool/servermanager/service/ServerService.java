@@ -1,6 +1,7 @@
 package mindustrytool.servermanager.service;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -16,10 +17,10 @@ import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
-import com.github.dockerjava.api.model.PortBinding;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.Volume;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
@@ -29,6 +30,7 @@ import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.utils.ApiError;
+import mindustrytool.servermanager.utils.Utils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -42,6 +44,33 @@ public class ServerService {
     private final ModelMapper modelMapper;
 
     private ConcurrentHashMap<UUID, MindustryServer> servers = new ConcurrentHashMap<>();
+
+    @PostConstruct
+    private void init() {
+        var containers = dockerClient.listContainersCmd()//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        for (Container container : containers) {
+            var labels = container.getLabels();
+
+            if (labels == null || !labels.containsKey(Config.serverLabelName)) {
+                log.warn("Skip container " + container.getId() + " because it does not have label " + Config.serverLabelName);
+                continue;
+            }
+
+            if (!container.getState().equalsIgnoreCase("running")) {
+                log.info("Starting container " + container.getId());
+                dockerClient.startContainerCmd(container.getId()).exec();
+            }
+
+            var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
+
+            MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), container.getPorts()[0].getPublicPort());
+
+            servers.put(request.getId(), server);
+        }
+    }
 
     private int findFreePort() {
         int port = Config.DEFAULT_MINDUSTRY_SERVER_PORT;
@@ -81,52 +110,59 @@ public class ServerService {
         }
 
         int port = request.getPort() != 0 ? request.getPort() : findFreePort();
+        String dockerContainerName = request.getId().toString() + "-" + port;
 
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
-                .withNameFilter(List.of(request.getId().toString()))//
+                .withNameFilter(List.of(dockerContainerName))//
                 .exec();
 
-        Container container = null;
+        String containerId;
 
         if (containers.isEmpty()) {
-            String requestId = request.getId().toString();
-            String serverPath = Paths.get(Config.volumeFolderPath, "servers", requestId).toAbsolutePath().toString();
+            String serverId = request.getId().toString();
+            String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
 
-            try {
-                Volume volume = new Volume("/data");
-                Bind bind = new Bind(serverPath, volume);
+            Volume volume = new Volume("/config");
+            Bind bind = new Bind(serverPath, volume);
 
-                ExposedPort tcp = ExposedPort.tcp(port);
-                Ports portBindings = new Ports();
-                portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
+            ExposedPort tcp = ExposedPort.tcp(port);
+            ExposedPort udp = ExposedPort.udp(port);
 
-                var result = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
-                        .withName(requestId)//
-                        .withEnv("SERVER_ID=%s".formatted(requestId))//
-                        .withExposedPorts(new ExposedPort(port))//
-                        .withHostConfig(HostConfig.newHostConfig().withPortBindings(portBindings).withBinds(bind))//
-                        .exec();
+            Ports portBindings = new Ports();
 
-                container = dockerClient.listContainersCmd()//
-                        .withIdFilter(List.of(result.getId()))//
-                        .exec()//
-                        .stream()//
-                        .findFirst()//
-                        .orElseThrow();
+            portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
+            portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
 
-            } catch (Exception e) {
-                throw new RuntimeException("Failed to create Docker container for request ID: " + requestId, e);
-            }
+            log.info("Create new container on port " + port);
+
+            var result = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
+                    .withName(dockerContainerName)//
+                    .withExposedPorts(tcp, udp)//
+                    .withAttachStdout(true)//
+                    .withTty(true)//
+                    .withAttachStdin(true)//
+                    .withAttachStderr(true)//
+                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)))//
+                    .withHostConfig(HostConfig.newHostConfig()//
+                            .withPortBindings(portBindings)//
+                            .withBinds(bind))//
+                    .exec();
+
+        containerId = result.getId();
+        dockerClient.startContainerCmd(containerId).exec();
+
         } else {
-            container = containers.get(0);
+            var container = containers.get(0);
+            containerId = container.getId();
+
+            if (!container.getState().equalsIgnoreCase("running")) {
+                log.info("Start container " + container.getNames());
+                dockerClient.startContainerCmd(containerId).exec();
+            }
         }
 
-        if (!container.getState().equalsIgnoreCase("running")) {
-            dockerClient.startContainerCmd(container.getId()).exec();
-        }
-
-        MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port);
+        MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port);
 
         servers.put(request.getId(), server);
 
@@ -149,7 +185,7 @@ public class ServerService {
         return Mono.empty();
     }
 
-    public Mono<Void> createFile(UUID serverId, FilePart file, String path) {
+    public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {
         var folderPath = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path);
 
         File folder = new File(folderPath.toUri());
@@ -158,7 +194,17 @@ public class ServerService {
             folder.mkdirs();
         }
 
-        return file.transferTo(folderPath);
+        File file = new File(folder, filePart.filename());
+
+        try {
+            if (!file.exists()) {
+                file.createNewFile();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return filePart.transferTo(file);
     }
 
     public Mono<Void> deleteFile(UUID serverId, String path) {
