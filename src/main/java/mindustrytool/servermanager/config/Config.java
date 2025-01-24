@@ -27,7 +27,7 @@ public class Config implements WebFluxConfigurer {
     public static int DEFAULT_MINDUSTRY_SERVER_PORT = 6567;
     public static int MAXIMUM_MINDUSTRY_SERVER_PORT = 20000;
 
-    public static String volumeFolderPath = "/data";
+    public static String volumeFolderPath = "data";
     public static File volumeFolder = new File(volumeFolderPath);
 
     @PostConstruct

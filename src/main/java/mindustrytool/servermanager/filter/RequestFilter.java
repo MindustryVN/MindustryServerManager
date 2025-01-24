@@ -30,23 +30,8 @@ public class RequestFilter implements WebFilter {
                     var status = exchange.getResponse().getStatusCode();
                     var method = request.getMethod();
                     var duration = Duration.between(start, Instant.now()).toMillis();
-                    var color = duration < 50 //
-                            ? "green"
-                            : duration < 200//
-                                    ? "yellow"
-                                    : "red";
-
-                    var statusColor = status == null //
-                            ? "red"
-                            : status.value() < 300 //
-                                    ? "green"
-                                    : status.value() < 400 //
-                                            ? "blue"
-                                            : status.value() < 500//
-                                                    ? "yellow"
-                                                    : "red";
-
-                    log.info("[[%s]%dms[white]] [[%s]%s[white]] %s %s".formatted(color, duration, statusColor, status == null ? "Unknown" : status.value(), method.toString().toUpperCase(), requestUrl));
+                    
+                    log.info("[%dms] [%s] %s %s".formatted( duration,  status == null ? "Unknown" : status.value(), method.toString().toUpperCase(), requestUrl));
                 });
     }
 

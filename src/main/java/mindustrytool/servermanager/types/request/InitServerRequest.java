@@ -10,11 +10,9 @@ import lombok.Data;
 @Data
 public class InitServerRequest {
 
-    @NotEmpty
     @NotNull
     private UUID id;
 
-    @NotEmpty
     @NotNull
     private UUID userId;
 

@@ -45,13 +45,13 @@ public class ServerController {
         return serverService.hostServer(request);
     }
 
-    @PostMapping(name = "/servers/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    Mono<Void> createFile(@PathVariable UUID serverId, @RequestPart("path") String path, @RequestPart("file") FilePart file) {
+    @PostMapping(value = "/servers/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    Mono<Void> createFile(@PathVariable("id") UUID serverId, @RequestPart("path") String path, @RequestPart("file") FilePart file) {
         return serverService.createFile(serverId, file, path);
     }
 
-    @DeleteMapping(name = "/servers/{id}/files")
-    Mono<Void> deleteFile(@PathVariable UUID serverId, @RequestParam("path") String path) {
+    @DeleteMapping("/servers/{id}/files")
+    Mono<Void> deleteFile(@PathVariable("id") UUID serverId, @RequestParam("path") String path) {
         return serverService.deleteFile(serverId, path);
     }
 }

@@ -77,7 +77,7 @@ public class GlobalExceptionHandler {
                 .map(address -> address.get(0))//
                 .defaultIfEmpty("Unknown");
 
-        return Mono.zip(urlMono, ipMono)//
+        return Mono.zipDelayError(urlMono, ipMono)//
                 .map(result -> {
                     var url = result.getT1();
 
@@ -87,9 +87,7 @@ public class GlobalExceptionHandler {
                             .url(url)//
                             .build();
 
-                    if (status.value() >= 500) {
-                        exception.printStackTrace();
-                    }
+                    exception.printStackTrace();
 
                     return ResponseEntity.status(status).body(data);
                 });

@@ -20,7 +20,8 @@ public record EnvConfig(//
     public static record ServerConfig(//
             Boolean autoPortAssign, //
             String accessToken, //
-            String securityKey//
+            String securityKey, //
+            String dataFolder//
     ) {
     }
 }
