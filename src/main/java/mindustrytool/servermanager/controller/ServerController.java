@@ -54,4 +54,9 @@ public class ServerController {
     Mono<Void> deleteFile(@PathVariable("id") UUID serverId, @RequestParam("path") String path) {
         return serverService.deleteFile(serverId, path);
     }
+
+    @PostMapping("/servers/{id}/command")
+    public Mono<Void> sendCommand(@PathVariable("id") UUID serverId, @RequestBody String command) {
+        return serverService.sendCommand(serverId, command);
+    }
 }

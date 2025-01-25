@@ -21,7 +21,8 @@ public record EnvConfig(//
             Boolean autoPortAssign, //
             String accessToken, //
             String securityKey, //
-            String dataFolder//
+            String dataFolder,//
+            String serverUrl
     ) {
     }
 }

@@ -45,31 +45,14 @@ public class ServerService {
 
     private ConcurrentHashMap<UUID, MindustryServer> servers = new ConcurrentHashMap<>();
 
+    public MindustryServer getServerById(UUID serverId) {
+        return servers.get(serverId);
+    }
+
     @PostConstruct
     private void init() {
-        var containers = dockerClient.listContainersCmd()//
-                .withLabelFilter(List.of(Config.serverLabelName))//
-                .exec();
+        loadRunningServers();
 
-        for (Container container : containers) {
-            var labels = container.getLabels();
-
-            if (labels == null || !labels.containsKey(Config.serverLabelName)) {
-                log.warn("Skip container " + container.getId() + " because it does not have label " + Config.serverLabelName);
-                continue;
-            }
-
-            if (!container.getState().equalsIgnoreCase("running")) {
-                log.info("Starting container " + container.getId());
-                dockerClient.startContainerCmd(container.getId()).exec();
-            }
-
-            var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
-
-            MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), container.getPorts()[0].getPublicPort());
-
-            servers.put(request.getId(), server);
-        }
     }
 
     private int findFreePort() {
@@ -140,6 +123,7 @@ public class ServerService {
                     .withName(dockerContainerName)//
                     .withExposedPorts(tcp, udp)//
                     .withAttachStdout(true)//
+                    .withEnv("SERVER_ID=" + serverId)//
                     .withTty(true)//
                     .withAttachStdin(true)//
                     .withAttachStderr(true)//
@@ -149,8 +133,8 @@ public class ServerService {
                             .withBinds(bind))//
                     .exec();
 
-        containerId = result.getId();
-        dockerClient.startContainerCmd(containerId).exec();
+            containerId = result.getId();
+            dockerClient.startContainerCmd(containerId).exec();
 
         } else {
             var container = containers.get(0);
@@ -162,7 +146,7 @@ public class ServerService {
             }
         }
 
-        MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port);
+        MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port, envConfig);
 
         servers.put(request.getId(), server);
 
@@ -216,4 +200,41 @@ public class ServerService {
 
         return Mono.empty();
     }
+
+    private void loadRunningServers() {
+        var containers = dockerClient.listContainersCmd()//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        for (Container container : containers) {
+            var labels = container.getLabels();
+
+            if (labels == null || !labels.containsKey(Config.serverLabelName)) {
+                log.warn("Skip container " + container.getId() + " because it does not have label " + Config.serverLabelName);
+                continue;
+            }
+
+            if (!container.getState().equalsIgnoreCase("running")) {
+                log.info("Starting container " + container.getId());
+                dockerClient.startContainerCmd(container.getId()).exec();
+            }
+
+            var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
+
+            MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), container.getPorts()[0].getPublicPort(), envConfig);
+
+            servers.put(request.getId(), server);
+        }
+    }
+
+    public Mono<Void> sendCommand( UUID serverId, String command){
+        MindustryServer server = servers.get(serverId);
+
+        if (server == null) {
+            return ApiError.badRequest("Server is not running");
+        }
+
+        return server.sendCommand(command);
+    }
+
 }

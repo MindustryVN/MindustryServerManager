@@ -1,6 +1,7 @@
 package mindustrytool.servermanager.filter;
 
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -60,6 +61,15 @@ public class SecurityFilter implements WebFilter {
             return chain.filter(exchange);
         }
 
+        if (uri.startsWith("/internal-api")) {
+            String clientIp = exchange.getRequest().getRemoteAddress().getAddress().getHostAddress();
+            
+            if (!isInternalIp(clientIp)) {
+                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+                return exchange.getResponse().setComplete();
+            }
+        }
+
         String securityKey = envConfig.serverConfig().securityKey();
 
         if (securityKey == null) {
@@ -109,6 +119,10 @@ public class SecurityFilter implements WebFilter {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private boolean isInternalIp(String ip) {
+        return ip.startsWith("10.") || ip.startsWith("192.168.") || ip.equals("127.0.0.1");
     }
 
 }
