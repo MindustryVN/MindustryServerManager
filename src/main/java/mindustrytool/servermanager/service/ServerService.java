@@ -85,6 +85,27 @@ public class ServerService {
     public Mono<ServerDto> initServer(InitServerRequest request) {
         if (servers.containsKey(request.getId())) {
             var server = servers.get(request.getId());
+            String dockerContainerName = request.getId().toString() + "-" + server.getPort();
+
+            var containers = dockerClient.listContainersCmd()//
+                    .withShowAll(true)//
+                    .withNameFilter(List.of(dockerContainerName))//
+                    .exec();
+
+            if (!containers.isEmpty()) {
+                var container = containers.get(0);
+
+                if (!container.getState().equalsIgnoreCase("running")) {
+                    log.info("Start container " + container.getNames());
+                    dockerClient.startContainerCmd(container.getId()).exec();
+                }
+            } else {
+                log.warn("Container " + dockerContainerName + " is not running");
+                servers.remove(request.getId());
+                
+                return Mono.error(new RuntimeException("Container is not running"));
+            }
+
             return Mono.just(modelMapper.map(server, ServerDto.class));
         }
 
@@ -228,7 +249,7 @@ public class ServerService {
         }
     }
 
-    public Mono<Void> sendCommand( UUID serverId, String command){
+    public Mono<Void> sendCommand(UUID serverId, String command) {
         MindustryServer server = servers.get(serverId);
 
         if (server == null) {
