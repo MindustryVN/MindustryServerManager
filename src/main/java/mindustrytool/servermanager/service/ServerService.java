@@ -145,9 +145,6 @@ public class ServerService {
                     .withExposedPorts(tcp, udp)//
                     .withAttachStdout(true)//
                     .withEnv("SERVER_ID=" + serverId)//
-                    .withTty(true)//
-                    .withAttachStdin(true)//
-                    .withAttachStderr(true)//
                     .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)))//
                     .withHostConfig(HostConfig.newHostConfig()//
                             .withPortBindings(portBindings)//
