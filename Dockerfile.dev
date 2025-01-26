@@ -1,0 +1,9 @@
+FROM gradle:8.11.1-jdk17 AS build
+
+WORKDIR /app
+
+COPY . .
+
+
+
+CMD ["./gradlew", "bootRun"]
