@@ -14,10 +14,25 @@ import reactor.core.publisher.Mono;
 @RestController
 @RequestMapping("/internal-api/v1")
 @RequiredArgsConstructor
-public class InternalController {
+public class InternalServerController {
 
     @PostMapping("players")
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
-        return ServerFilter.getContext().flatMap(server -> server.getServers(payload));
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().getServers(payload));
+    }
+
+    
+    @PostMapping("total-player")
+    public Mono<Integer> getTotalPlayer() {
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().getTotalPlayer());
+    }
+    @PostMapping("chat")
+    public Mono<Void> sendChat(@RequestBody String chat) {
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().sendChat(chat));
+    }
+
+    @PostMapping("console")
+    public Mono<Void> sendConsole(@RequestBody String console) {
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().sendConsole(console));
     }
 }

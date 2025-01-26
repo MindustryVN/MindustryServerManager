@@ -3,7 +3,6 @@ package mindustrytool.servermanager.filter;
 import java.util.UUID;
 
 import org.springframework.core.annotation.Order;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.WebFilter;
@@ -12,7 +11,8 @@ import org.springframework.web.server.WebFilterChain;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.service.ServerService;
-import mindustrytool.servermanager.types.data.MindustryServer;
+import mindustrytool.servermanager.types.data.ServerInstance;
+import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Mono;
 import reactor.util.context.Context;
 
@@ -22,11 +22,11 @@ import reactor.util.context.Context;
 @RequiredArgsConstructor
 public class ServerFilter implements WebFilter {
 
-    public static final Class<?> CONTEXT_KEY = MindustryServer.class;
+    public static final Class<?> CONTEXT_KEY = ServerInstance.class;
 
     private final ServerService serverService;
 
-    public static Mono<MindustryServer> getContext() {
+    public static Mono<ServerInstance> getContext() {
         return Mono.deferContextual(Mono::just)//
                 .cast(Context.class)//
                 .filter(ServerFilter::hasContext)//
@@ -37,11 +37,11 @@ public class ServerFilter implements WebFilter {
         return context.hasKey(CONTEXT_KEY);
     }
 
-    private static Mono<MindustryServer> getContext(Context context) {
-        return context.<Mono<MindustryServer>>get(CONTEXT_KEY);
+    private static Mono<ServerInstance> getContext(Context context) {
+        return context.<Mono<ServerInstance>>get(CONTEXT_KEY);
     }
 
-    public static Context withRequest(Mono<? extends MindustryServer> request) {
+    public static Context withRequest(Mono<? extends ServerInstance> request) {
         return Context.of(CONTEXT_KEY, request);
     }
 
@@ -54,8 +54,8 @@ public class ServerFilter implements WebFilter {
 
             if (serverIdHeader == null) {
                 log.warn("Request to %s not contain X-SERVER-ID header".formatted(uri));
-                exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
-                return exchange.getResponse().setComplete();
+
+                return ApiError.badRequest("Missing header");
             }
 
             UUID serverId = UUID.fromString(serverIdHeader);
@@ -63,8 +63,8 @@ public class ServerFilter implements WebFilter {
 
             if (server == null) {
                 log.warn("Request to %s with invalid X-SERVER-ID: %s header or server not exist".formatted(uri, serverId));
-                exchange.getResponse().setStatusCode(HttpStatus.BAD_REQUEST);
-                return exchange.getResponse().setComplete();
+
+                return ApiError.badRequest("Invalid server id, server not exist");
             }
 
             return chain.filter(exchange).contextWrite(withRequest(Mono.just(server)));

@@ -25,7 +25,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
-import mindustrytool.servermanager.types.data.MindustryServer;
+import mindustrytool.servermanager.types.data.ServerInstance;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
@@ -43,9 +43,9 @@ public class ServerService {
     private final EnvConfig envConfig;
     private final ModelMapper modelMapper;
 
-    private ConcurrentHashMap<UUID, MindustryServer> servers = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<UUID, ServerInstance> servers = new ConcurrentHashMap<>();
 
-    public MindustryServer getServerById(UUID serverId) {
+    public ServerInstance getServerById(UUID serverId) {
         return servers.get(serverId);
     }
 
@@ -132,31 +132,32 @@ public class ServerService {
 
             ExposedPort tcp = ExposedPort.tcp(port);
             ExposedPort udp = ExposedPort.udp(port);
-            
+
             Ports portBindings = new Ports();
-            
+
             portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
             portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
-            
+
             log.info("Create new container on port " + port);
-            
+
             var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
-            .withName(dockerContainerName)//
-            .withAttachStdout(true)//
-            .withEnv("SERVER_ID=" + serverId)//
-            .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)));
-            
+                    .withName(dockerContainerName)//
+                    .withAttachStdout(true)//
+                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)));
+
             if (Config.IS_DEVELOPMENT) {
                 ExposedPort localTcp = ExposedPort.tcp(9999);
-                portBindings.bind(localTcp, Ports.Binding.bindPort(port));
+                portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
 
                 command.withExposedPorts(tcp, udp, localTcp)//
+                        .withEnv("SERVER_ID=" + serverId, "ENV=DEV")//
                         .withHostConfig(HostConfig.newHostConfig()//
                                 .withPortBindings(portBindings)//
                                 .withNetworkMode("mindustry-server")//
                                 .withBinds(bind));
             } else {
                 command.withExposedPorts(tcp, udp)//
+                        .withEnv("SERVER_ID=" + serverId)//
                         .withHostConfig(HostConfig.newHostConfig()//
                                 .withPortBindings(portBindings)//
                                 .withNetworkMode("mindustry-server")//
@@ -178,7 +179,7 @@ public class ServerService {
             }
         }
 
-        MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port, envConfig);
+        ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port, envConfig);
 
         servers.put(request.getId(), server);
 
@@ -192,7 +193,7 @@ public class ServerService {
     }
 
     public Mono<Void> stopServer(UUID serverId) {
-        MindustryServer server = servers.get(serverId);
+        ServerInstance server = servers.get(serverId);
 
         if (server == null) {
             return ApiError.badRequest("Server is not running");
@@ -253,20 +254,24 @@ public class ServerService {
 
             var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
 
-            MindustryServer server = new MindustryServer(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), container.getPorts()[0].getPublicPort(), envConfig);
+            // TODO: FIX PORT
+            String containerName = container.getNames()[0];
+
+            int port = Integer.parseInt(containerName.substring(containerName.lastIndexOf('-') + 1));
+            ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, envConfig);
 
             servers.put(request.getId(), server);
         }
     }
 
     public Mono<Void> sendCommand(UUID serverId, String command) {
-        MindustryServer server = servers.get(serverId);
+        ServerInstance server = servers.get(serverId);
 
         if (server == null) {
             return ApiError.badRequest("Server is not running");
         }
 
-        return server.sendCommand(command);
+        return server.getServer().sendCommand(command);
     }
 
 }
