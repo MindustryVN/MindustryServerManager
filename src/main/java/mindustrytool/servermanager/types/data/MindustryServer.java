@@ -42,7 +42,7 @@ public class MindustryServer {
 
     @JsonIgnore
     public String serverUri(String... resource) {
-        return URI.create(id.toString() + "-" + port + ":8080/" + String.join("/", resource)).toString();
+        return URI.create("http://" + id.toString() + "-" + port + ":8080/" + String.join("/", resource)).toString();
     }
 
     @JsonIgnore
