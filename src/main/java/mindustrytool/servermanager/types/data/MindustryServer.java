@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import mindustrytool.servermanager.EnvConfig;
+import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.messages.request.PlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import reactor.core.publisher.Mono;
@@ -42,7 +43,7 @@ public class MindustryServer {
 
     @JsonIgnore
     public String serverUri(String... resource) {
-        return URI.create("http://" + id.toString() + "-" + port + ":8080/" + String.join("/", resource)).toString();
+        return URI.create((Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + "-" + port + ":9999/") + String.join("/", resource)).toString();
     }
 
     @JsonIgnore
