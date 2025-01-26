@@ -132,25 +132,38 @@ public class ServerService {
 
             ExposedPort tcp = ExposedPort.tcp(port);
             ExposedPort udp = ExposedPort.udp(port);
-
+            
             Ports portBindings = new Ports();
-
+            
             portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
             portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
             
             log.info("Create new container on port " + port);
+            
+            var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
+            .withName(dockerContainerName)//
+            .withAttachStdout(true)//
+            .withEnv("SERVER_ID=" + serverId)//
+            .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)));
+            
+            if (Config.IS_DEVELOPMENT) {
+                ExposedPort localTcp = ExposedPort.tcp(9999);
+                portBindings.bind(localTcp, Ports.Binding.bindPort(port));
 
-            var result = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
-                    .withName(dockerContainerName)//
-                    .withExposedPorts(tcp, udp)//
-                    .withAttachStdout(true)//
-                    .withEnv("SERVER_ID=" + serverId)//
-                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)))//
-                    .withHostConfig(HostConfig.newHostConfig()//
-                            .withPortBindings(portBindings)//
-                            .withNetworkMode("mindustry-server")//
-                            .withBinds(bind))//
-                    .exec();
+                command.withExposedPorts(tcp, udp, localTcp)//
+                        .withHostConfig(HostConfig.newHostConfig()//
+                                .withPortBindings(portBindings)//
+                                .withNetworkMode("mindustry-server")//
+                                .withBinds(bind));
+            } else {
+                command.withExposedPorts(tcp, udp)//
+                        .withHostConfig(HostConfig.newHostConfig()//
+                                .withPortBindings(portBindings)//
+                                .withNetworkMode("mindustry-server")//
+                                .withBinds(bind));
+            }
+
+            var result = command.exec();
 
             containerId = result.getId();
             dockerClient.startContainerCmd(containerId).exec();
