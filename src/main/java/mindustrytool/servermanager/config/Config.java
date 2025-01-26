@@ -22,6 +22,11 @@ import jakarta.annotation.PostConstruct;
 @Configuration
 public class Config implements WebFluxConfigurer {
 
+    public static final String ENV = System.getenv("ENV");
+
+    public static final boolean IS_DEVELOPMENT = ENV != null && ENV.equals("DEV");
+    public static final boolean IS_PRODUCTION = !IS_DEVELOPMENT;
+
     public static int DEFAULT_MINDUSTRY_SERVER_PORT = 6567;
     public static int MAXIMUM_MINDUSTRY_SERVER_PORT = 20000;
 

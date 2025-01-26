@@ -102,7 +102,7 @@ public class ServerService {
             } else {
                 log.warn("Container " + dockerContainerName + " is not running");
                 servers.remove(request.getId());
-                
+
                 return Mono.error(new RuntimeException("Container is not running"));
             }
 
@@ -137,7 +137,7 @@ public class ServerService {
 
             portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
             portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
-
+            
             log.info("Create new container on port " + port);
 
             var result = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
