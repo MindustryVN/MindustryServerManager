@@ -130,6 +130,7 @@ public class ServerService {
                     .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)))//
                     .withHostConfig(HostConfig.newHostConfig()//
                             .withPortBindings(portBindings)//
+                            .withNetworkMode("mindustry-server")//
                             .withBinds(bind))//
                     .exec();
 
