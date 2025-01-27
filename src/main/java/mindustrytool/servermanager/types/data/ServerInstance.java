@@ -101,7 +101,7 @@ public class ServerInstance {
         }
 
         public Mono<Void> startServer(StartServerMessageRequest request) {
-            return WebClient.create(serverUri("start-server"))//
+            return WebClient.create(serverUri("host"))//
                     .post()//
                     .bodyValue(request)//
                     .retrieve()//
