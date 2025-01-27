@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.codec.multipart.FilePart;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
@@ -25,6 +26,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
+import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
+import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
+import mindustrytool.servermanager.messages.response.StatsMessageResponse;
+import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerInstance;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
@@ -49,37 +54,79 @@ public class ServerService {
         return servers.get(serverId);
     }
 
+    public long getTotalPlayers() {
+        return servers.values()//
+                .stream()//
+                .mapToLong(i -> i.getPlayers().stream().filter(s -> s.getLeaveAt() == null).count())//
+                .sum();
+    }
+
+    private boolean shouldShutdownServer(ServerInstance server) {
+        return server.isAutoTurnOff() && server.getPlayers().size() == 0;
+    }
+
+    private void handleServerShutdown(ServerInstance server) {
+        var shouldShowdown = shouldShutdownServer(server);
+        if (shouldShowdown) {
+            if (server.isKillFlag()) {
+                killServer(server.getId());
+            } else {
+                server.setKillFlag(true);
+            }
+        } else {
+            server.setKillFlag(false);
+        }
+    }
+
+    @Scheduled(fixedDelay = 600000)
+    private void shutdownNoPlayerServer() {
+        servers.values()//
+                .stream()//
+                .sorted((o1, o2) -> o1.getInitiatedAt().getNano() - o2.getInitiatedAt().getNano())//
+                .forEach(server -> handleServerShutdown(server));
+    }
+
+    public Flux<Player> getPlayers(UUID id) {
+        var instance = servers.get(id);
+
+        if (instance == null) {
+            return Flux.empty();
+        }
+
+        return Flux.fromIterable(instance.getPlayers())//
+                .filter(player -> player.getLeaveAt() == null);
+    }
+
     @PostConstruct
     private void init() {
         loadRunningServers();
 
     }
 
-    private int findFreePort() {
-        int port = Config.DEFAULT_MINDUSTRY_SERVER_PORT;
-
-        var ports = servers.values()//
+    public List<Container> findContainerByServerId(UUID serverId) {
+        return dockerClient.listContainersCmd()//
+                .exec()//
                 .stream()//
-                .map(server -> server.getPort())//
+                .filter(container -> List.of(container.getNames())//
+                        .stream()//
+                        .anyMatch(name -> name.startsWith(serverId.toString())))//
                 .toList();
+    }
 
-        do {
-            if (!ports.contains(port))
-                break;
+    public void killServer(UUID serverId) {
+        servers.remove(serverId);
 
-            port++;
+        var containers = findContainerByServerId(serverId);
 
-        } while (port < Config.MAXIMUM_MINDUSTRY_SERVER_PORT);
-
-        if (port == Config.MAXIMUM_MINDUSTRY_SERVER_PORT) {
-            throw new RuntimeException("No available port");
+        for (var container : containers) {
+            dockerClient.stopContainerCmd(container.getId()).exec();
         }
-
-        return port;
     }
 
     public Flux<ServerDto> getServers() {
-        return Flux.fromIterable(servers.values()).map(server -> modelMapper.map(server, ServerDto.class));
+        return Flux.fromIterable(servers.values())//
+                .flatMap(server -> server.getServer().isHosting().map(isHosting -> server.setStatus(isHosting ? "HOST" : "UP")))//
+                .map(server -> modelMapper.map(server, ServerDto.class));
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
@@ -113,7 +160,7 @@ public class ServerService {
             return ApiError.badRequest("Port must be specified or autoPortAssign must be on");
         }
 
-        int port = request.getPort() != 0 ? request.getPort() : findFreePort();
+        int port = request.getPort();
         String dockerContainerName = request.getId().toString() + "-" + port;
 
         var containers = dockerClient.listContainersCmd()//
@@ -179,7 +226,7 @@ public class ServerService {
             }
         }
 
-        ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port, envConfig);
+        ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port, request.isAutoTurnOff(), envConfig);
 
         servers.put(request.getId(), server);
 
@@ -254,11 +301,10 @@ public class ServerService {
 
             var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
 
-            // TODO: FIX PORT
             String containerName = container.getNames()[0];
 
             int port = Integer.parseInt(containerName.substring(containerName.lastIndexOf('-') + 1));
-            ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, envConfig);
+            ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
 
             servers.put(request.getId(), server);
         }
@@ -274,4 +320,60 @@ public class ServerService {
         return server.getServer().sendCommand(command);
     }
 
+    public Mono<Void> host(UUID serverId, StartServerMessageRequest request) {
+        ServerInstance server = servers.get(serverId);
+
+        if (server == null) {
+            return ApiError.badRequest("Server is not running");
+        }
+
+        if (request.getCommands() != null && !request.getCommands().isBlank()) {
+            var commands = request.getCommands().split("\n");
+
+            return Flux.fromArray(commands).concatMap(command -> server.getServer().sendCommand(command)).then();
+        }
+
+        return server.getServer().startServer(request);
+    }
+
+    public Mono<Void> ok(UUID serverId) {
+        ServerInstance server = servers.get(serverId);
+
+        if (server == null) {
+            return ApiError.badRequest("Server is not running");
+        }
+
+        return server.getServer().ok();
+    }
+
+    public Mono<StatsMessageResponse> stats(UUID serverId) {
+        ServerInstance server = servers.get(serverId);
+
+        if (server == null) {
+            return ApiError.badRequest("Server is not running");
+        }
+
+        return server.getServer().getStats();
+    }
+
+    public Mono<StatsMessageResponse> detailStats(UUID serverId) {
+        ServerInstance server = servers.get(serverId);
+
+        if (server == null) {
+            return ApiError.badRequest("Server is not running");
+        }
+
+        return server.getServer().getDetailStats();
+    }
+
+    public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
+        ServerInstance server = servers.get(serverId);
+
+        if (server == null) {
+            return ApiError.badRequest("Server is not running");
+        }
+
+        return server.getServer().setPlayer(payload);
+
+    }
 }

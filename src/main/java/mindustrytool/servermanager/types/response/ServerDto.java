@@ -13,6 +13,7 @@ public class ServerDto {
     private String name;
     private String description;
     private String mode;
-
+    private String status;
     private int port;
+
 }

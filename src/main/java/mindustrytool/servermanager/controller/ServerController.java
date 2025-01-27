@@ -16,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 
 import lombok.RequiredArgsConstructor;
+import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
+import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
+import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
-import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import reactor.core.publisher.Flux;
@@ -40,11 +42,6 @@ public class ServerController {
         return serverService.initServer(request);
     }
 
-    @PostMapping("/servers/{id}/host")
-    Mono<Void> hostServer(@Validated @RequestBody HostServerRequest request) {
-        return serverService.hostServer(request);
-    }
-
     @PostMapping(value = "/servers/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     Mono<Void> createFile(@PathVariable("id") UUID serverId, @RequestPart("path") String path, @RequestPart("file") FilePart file) {
         return serverService.createFile(serverId, file, path);
@@ -58,5 +55,25 @@ public class ServerController {
     @PostMapping("/servers/{id}/command")
     public Mono<Void> sendCommand(@PathVariable("id") UUID serverId, @RequestBody String command) {
         return serverService.sendCommand(serverId, command);
+    }
+
+    @PostMapping("/servers/{id}/host")
+    public Mono<Void> host(@PathVariable("id") UUID serverId, @RequestBody StartServerMessageRequest request) {
+        return serverService.host(serverId, request);
+    }
+
+    @PostMapping("/servers/{id}/set-player")
+    public Mono<Void> setPlayer(@PathVariable("id") UUID serverId, @RequestBody SetPlayerMessageRequest request) {
+        return serverService.setPlayer(serverId, request);
+    }
+
+    @GetMapping("/servers/{id}/stats")
+    public Mono<StatsMessageResponse> stats(@PathVariable("id") UUID serverId) {
+        return serverService.stats(serverId);
+    }
+
+    @GetMapping("/servers/{id}/ok")
+    public Mono<StatsMessageResponse> detailStats(@PathVariable("id") UUID serverId) {
+        return serverService.detailStats(serverId);
     }
 }
