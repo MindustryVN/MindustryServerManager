@@ -141,7 +141,9 @@ public class ServerInstance {
                     .get()//
                     .headers(this::setHeaders)//
                     .retrieve()//
-                    .bodyToMono(GetServersMessageResponse.class);
+                    .bodyToFlux(GetServersMessageResponse.ResponseData.class)
+                    .collectList()//
+                    .map(server -> new GetServersMessageResponse().setServers(server));
         }
 
         public Mono<Integer> startServer(UUID serverId) {
