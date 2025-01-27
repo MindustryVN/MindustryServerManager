@@ -3,6 +3,7 @@ package mindustrytool.servermanager.service;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -38,6 +39,7 @@ import mindustrytool.servermanager.utils.ApiError;
 import mindustrytool.servermanager.utils.Utils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 @Slf4j
 @Service
@@ -125,8 +127,9 @@ public class ServerService {
 
     public Flux<ServerDto> getServers() {
         return Flux.fromIterable(servers.values())//
-                .flatMap(server -> server.getServer().isHosting().map(isHosting -> server.setStatus(isHosting ? "HOST" : "UP")))//
-                .map(server -> modelMapper.map(server, ServerDto.class));
+                .flatMap(server -> server.getServer()//
+                        .getStats()//
+                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
@@ -232,7 +235,10 @@ public class ServerService {
 
         log.info("Created server: " + request.getName());
 
-        return Mono.just(modelMapper.map(server, ServerDto.class));
+        return server.getServer()//
+                .isHosting()//
+                .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
+                .thenReturn(modelMapper.map(server, ServerDto.class));
     }
 
     public Mono<Void> hostServer(HostServerRequest request) {

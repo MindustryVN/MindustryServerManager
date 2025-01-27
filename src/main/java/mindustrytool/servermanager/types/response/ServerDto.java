@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
+import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 
 @Data
 @Accessors(chain = true)
@@ -15,5 +16,6 @@ public class ServerDto {
     private String mode;
     private String status;
     private int port;
+    private StatsMessageResponse usage;
 
 }
