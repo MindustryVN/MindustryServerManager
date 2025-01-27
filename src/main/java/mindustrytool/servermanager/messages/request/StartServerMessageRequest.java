@@ -6,6 +6,6 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class StartServerMessageRequest {
-    String mapName;
+    String commands;
     String mode;
 }

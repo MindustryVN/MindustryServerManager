@@ -1,6 +1,9 @@
 package mindustrytool.servermanager.types.data;
 
 import java.net.URI;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
@@ -14,6 +17,9 @@ import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.messages.request.PlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
+import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
+import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
+import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import reactor.core.publisher.Mono;
 
 @Data
@@ -26,18 +32,63 @@ public class ServerInstance {
     private final String mode;
     private final String containerId;
     private final int port;
+    private final boolean isAutoTurnOff;
+
+    private String status;
+
+    @JsonIgnore
+    private boolean killFlag = false;
+
+    @JsonIgnore
+    private final List<Player> players = new ArrayList<>();
 
     @JsonIgnore
     private final EnvConfig envConfig;
 
     @JsonIgnore
     private final Server server = new Server();
+
+    @JsonIgnore
     private final Backend backend = new Backend();
+
+    @JsonIgnore
+    private final Instant initiatedAt = Instant.now();
 
     public class Server {
         @JsonIgnore
         public String serverUri(String... resource) {
             return URI.create((Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + "-" + port + ":9999/") + String.join("/", resource)).toString();
+        }
+
+        public Mono<Void> setPlayer(SetPlayerMessageRequest request) {
+            return WebClient.create(serverUri("set-player"))//
+                    .post()//
+                    .bodyValue(request)//
+                    .retrieve()//
+                    .bodyToMono(String.class)//
+                    .then();
+        }
+
+        public Mono<Void> ok() {
+            return WebClient.create(serverUri("ok"))//
+                    .get()//
+                    .retrieve()//
+                    .bodyToMono(String.class)//
+                    .then();
+        }
+
+        public Mono<StatsMessageResponse> getStats() {
+            return WebClient.create(serverUri("stats"))//
+                    .get()//
+                    .retrieve()//
+                    .bodyToMono(StatsMessageResponse.class);
+        }
+
+        public Mono<StatsMessageResponse> getDetailStats() {
+            return WebClient.create(serverUri("detail-stats"))//
+                    .get()//
+                    .retrieve()//
+                    .bodyToMono(StatsMessageResponse.class);
         }
 
         public Mono<Void> sendCommand(String command) {
@@ -48,6 +99,22 @@ public class ServerInstance {
                     .bodyToMono(String.class)//
                     .then();
         }
+
+        public Mono<Void> startServer(StartServerMessageRequest request) {
+            return WebClient.create(serverUri("start-server"))//
+                    .post()//
+                    .bodyValue(request)//
+                    .retrieve()//
+                    .bodyToMono(String.class)//
+                    .then();
+        }
+
+        public Mono<Boolean> isHosting() {
+            return WebClient.create(serverUri("hosting"))//
+                    .get()//
+                    .retrieve()//
+                    .bodyToMono(Boolean.class);
+        }
     }
 
     public class Backend {
@@ -57,16 +124,73 @@ public class ServerInstance {
         }
 
         public String backendUri(String... resource) {
-            return URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/internal-servers/" + String.join("/", resource)).toString();
+            return URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/servers/" + String.join("/", resource)).toString();
         }
 
-        public Mono<SetPlayerMessageRequest> getServers(PlayerMessageRequest payload) {
+        public Mono<SetPlayerMessageRequest> setPlayer(PlayerMessageRequest payload) {
             return WebClient.create(backendUri("players"))//
                     .post()//
                     .headers(this::setHeaders)//
                     .bodyValue(payload)//
                     .retrieve()//
                     .bodyToMono(SetPlayerMessageRequest.class);
+        }
+
+        public Mono<GetServersMessageResponse> getServers(int page, int size) {
+            return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
+                    .get()//
+                    .headers(this::setHeaders)//
+                    .retrieve()//
+                    .bodyToMono(GetServersMessageResponse.class);
+        }
+
+        public Mono<Integer> startServer(UUID serverId) {
+            return WebClient.create(backendUri("servers", serverId.toString(), "start"))//
+                    .post()//
+                    .headers(this::setHeaders)//
+                    .retrieve()//
+                    .bodyToMono(Integer.class);
+        }
+
+        public Mono<Void> onPlayerLeave(PlayerMessageRequest payload) {
+            var player = players.stream().filter(p -> p.getUuid().equals(payload.getUuid())).findFirst().orElse(null);
+
+            if (player == null) {
+                player = new Player()//
+                        .setUuid(payload.getUuid())//
+                        .setName(payload.getName())//
+                        .setIp(payload.getIp());
+            }
+
+            player.setLeaveAt(Instant.now())//
+                    .setCreatedAt(Instant.now());
+
+            return Mono.empty();
+        }
+
+        public Mono<Void> onPlayerJoin(PlayerMessageRequest payload) {
+            var uuid = payload.getUuid();
+            var ip = payload.getIp();
+            var name = payload.getName();
+            var team = payload.getTeam();
+
+            var exist = players.stream().filter(p -> p.getUuid().equals(uuid)).findFirst().orElse(null);
+
+            if (exist != null) {
+                exist.setLeaveAt(null)//
+                        .setIp(ip)//
+                        .setTeam(team);
+            } else {
+                Player newPlayer = new Player()//
+                        .setUuid(uuid)//
+                        .setName(name)//
+                        .setIp(ip)//
+                        .setTeam(team);
+
+                players.add(newPlayer);
+            }
+
+            return Mono.empty();
         }
 
         public Mono<Void> sendChat(String chat) {
