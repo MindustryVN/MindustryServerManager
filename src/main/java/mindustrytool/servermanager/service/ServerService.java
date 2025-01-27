@@ -336,10 +336,10 @@ public class ServerService {
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
-            return Flux.fromArray(commands).concatMap(command -> server.getServer().sendCommand(command)).then();
+            return server.getServer().sendCommand("stop").thenMany(Flux.fromArray(commands)).concatMap(command -> server.getServer().sendCommand(command)).then();
         }
 
-        return server.getServer().startServer(request);
+        return server.getServer().sendCommand("stop").then(server.getServer().startServer(request));
     }
 
     public Mono<Void> ok(UUID serverId) {
