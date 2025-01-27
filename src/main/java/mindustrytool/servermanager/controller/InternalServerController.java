@@ -24,7 +24,7 @@ public class InternalServerController {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(payload));
     }
 
-    @PostMapping("total-player")
+    @GetMapping("total-player")
     public Mono<Integer> getTotalPlayer() {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().getTotalPlayer());
     }
@@ -43,6 +43,7 @@ public class InternalServerController {
     public Mono<Void> onPlayerLeave(@RequestBody PlayerMessageRequest request) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().onPlayerLeave(request));
     }
+
     @PostMapping("player-join")
     public Mono<Void> onPlayerJoin(@RequestBody PlayerMessageRequest request) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().onPlayerJoin(request));
