@@ -101,7 +101,7 @@ public class ServerInstance {
         }
 
         public Mono<Void> startServer(StartServerMessageRequest request) {
-            return WebClient.create(serverUri("start-server"))//
+            return WebClient.create(serverUri("host"))//
                     .post()//
                     .bodyValue(request)//
                     .retrieve()//
@@ -147,7 +147,7 @@ public class ServerInstance {
         }
 
         public Mono<Integer> startServer(UUID serverId) {
-            return WebClient.create(backendUri("servers", serverId.toString(), "start"))//
+            return WebClient.create(backendUri("servers", serverId.toString(), "start"))//a
                     .post()//
                     .headers(this::setHeaders)//
                     .retrieve()//
