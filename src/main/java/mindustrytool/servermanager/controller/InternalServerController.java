@@ -26,7 +26,7 @@ public class InternalServerController {
 
     @GetMapping("total-player")
     public Mono<Integer> getTotalPlayer() {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().getTotalPlayer());
+        return ServerFilter.getContext().map(server -> server.getPlayers().size());
     }
 
     @PostMapping("chat")
