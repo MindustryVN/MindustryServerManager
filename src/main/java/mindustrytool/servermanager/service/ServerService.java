@@ -295,26 +295,25 @@ public class ServerService {
                 .exec();
 
         for (Container container : containers) {
-            var labels = container.getLabels();
+            try {
+                var labels = container.getLabels();
 
-            if (labels == null || !labels.containsKey(Config.serverLabelName)) {
-                log.warn("Skip container " + container.getId() + " because it does not have label " + Config.serverLabelName);
-                continue;
+                if (!container.getState().equalsIgnoreCase("running")) {
+                    log.info("Starting container " + container.getId());
+                    dockerClient.startContainerCmd(container.getId()).exec();
+                }
+
+                var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
+
+                String containerName = container.getNames()[0];
+
+                int port = Integer.parseInt(containerName.substring(containerName.lastIndexOf('-') + 1));
+                ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
+
+                servers.put(request.getId(), server);
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-
-            if (!container.getState().equalsIgnoreCase("running")) {
-                log.info("Starting container " + container.getId());
-                dockerClient.startContainerCmd(container.getId()).exec();
-            }
-
-            var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
-
-            String containerName = container.getNames()[0];
-
-            int port = Integer.parseInt(containerName.substring(containerName.lastIndexOf('-') + 1));
-            ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
-
-            servers.put(request.getId(), server);
         }
     }
 
