@@ -152,7 +152,7 @@ public class ServerService {
             if (!containers.isEmpty()) {
                 var container = containers.get(0);
 
-                if (!container.getStatus().equalsIgnoreCase("running")) {
+                if (!container.getState().equalsIgnoreCase("running")) {
                     log.info("Start container " + container.getNames());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
@@ -216,7 +216,7 @@ public class ServerService {
             var container = containers.get(0);
             containerId = container.getId();
 
-            if (!container.getStatus().equalsIgnoreCase("running")) {
+            if (!container.getState().equalsIgnoreCase("running")) {
                 log.info("Start container " + container.getNames());
                 dockerClient.startContainerCmd(containerId).exec();
             }
@@ -281,11 +281,11 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
-        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().map(c -> c.getNames()[0] + " - " + c.getStatus()).toList())));
+        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().map(c -> c.getNames()[0] + " - " + c.getState()).toList())));
 
         for (Container container : containers) {
             try {
-                if (!container.getStatus().equalsIgnoreCase("running")) {
+                if (!container.getState().equalsIgnoreCase("running")) {
                     log.info("Starting container " + container.getId());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
