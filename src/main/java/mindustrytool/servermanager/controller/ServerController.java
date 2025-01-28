@@ -32,6 +32,11 @@ public class ServerController {
 
     private final ServerService serverService;
 
+    @GetMapping("/servers/{id}")
+    public Mono<ServerDto> getServer(@PathVariable("id") UUID serverId) {
+        return serverService.getServer(serverId);
+    }
+
     @GetMapping("/servers")
     public Flux<ServerDto> getServers() {
         return serverService.getServers();
@@ -72,8 +77,20 @@ public class ServerController {
         return serverService.stats(serverId);
     }
 
-    @GetMapping("/servers/{id}/ok")
+    @GetMapping("/servers/{id}/shutdown")
+    public Mono<Void> shutdown(@PathVariable("id") UUID serverId) {
+        serverService.shutdown(serverId);
+
+        return Mono.empty();
+    }
+
+    @GetMapping("/servers/{id}/detail-stats")
     public Mono<StatsMessageResponse> detailStats(@PathVariable("id") UUID serverId) {
         return serverService.detailStats(serverId);
+    }
+
+    @GetMapping("/servers/{id}/ok")
+    public Mono<Void> ok(@PathVariable("id") UUID serverId) {
+        return serverService.ok(serverId);
     }
 }

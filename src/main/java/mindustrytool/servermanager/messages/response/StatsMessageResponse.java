@@ -3,7 +3,9 @@ package mindustrytool.servermanager.messages.response;
 import java.util.List;
 
 import lombok.Data;
+import lombok.experimental.Accessors;
 
+@Accessors(chain = true)
 @Data
 public class StatsMessageResponse {
     public long ramUsage = 0;
@@ -12,5 +14,5 @@ public class StatsMessageResponse {
     public String mapName = "";
     public byte[] mapData;
     public List<String> mods;
-    public boolean isHosted;
+    public String status;
 }

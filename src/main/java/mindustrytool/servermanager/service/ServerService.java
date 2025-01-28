@@ -32,7 +32,6 @@ import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerInstance;
-import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.utils.ApiError;
@@ -71,7 +70,7 @@ public class ServerService {
         var shouldShowdown = shouldShutdownServer(server);
         if (shouldShowdown) {
             if (server.isKillFlag()) {
-                killServer(server.getId());
+                shutdown(server.getId());
             } else {
                 server.setKillFlag(true);
             }
@@ -115,7 +114,7 @@ public class ServerService {
                 .toList();
     }
 
-    public void killServer(UUID serverId) {
+    public void shutdown(UUID serverId) {
         servers.remove(serverId);
 
         var containers = findContainerByServerId(serverId);
@@ -127,6 +126,13 @@ public class ServerService {
 
     public Flux<ServerDto> getServers() {
         return Flux.fromIterable(servers.values())//
+                .flatMap(server -> server.getServer()//
+                        .getStats()//
+                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
+    }
+
+    public Mono<ServerDto> getServer(UUID id) {
+        return Mono.justOrEmpty(servers.get(id))//
                 .flatMap(server -> server.getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
@@ -241,10 +247,6 @@ public class ServerService {
                 .thenReturn(modelMapper.map(server, ServerDto.class));
     }
 
-    public Mono<Void> hostServer(HostServerRequest request) {
-        return Mono.empty();
-    }
-
     public Mono<Void> stopServer(UUID serverId) {
         ServerInstance server = servers.get(serverId);
 
@@ -333,13 +335,15 @@ public class ServerService {
             return ApiError.badRequest("Server is not running");
         }
 
+        var preHostCommand = "stop \nconfig port %s \n config name %s \nconfig description %s".formatted(server.getPort(), server.getName(), server.getDescription());
+
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
-            return server.getServer().sendCommand("stop").thenMany(Flux.fromArray(commands)).concatMap(command -> server.getServer().sendCommand(command)).then();
+            return server.getServer().sendCommand(preHostCommand).thenMany(Flux.fromArray(commands)).concatMap(command -> server.getServer().sendCommand(command)).then();
         }
 
-        return server.getServer().sendCommand("stop").then(server.getServer().startServer(request));
+        return server.getServer().sendCommand(preHostCommand).then(server.getServer().startServer(request));
     }
 
     public Mono<Void> ok(UUID serverId) {
@@ -356,7 +360,7 @@ public class ServerService {
         ServerInstance server = servers.get(serverId);
 
         if (server == null) {
-            return ApiError.badRequest("Server is not running");
+            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
         }
 
         return server.getServer().getStats();
@@ -366,7 +370,7 @@ public class ServerService {
         ServerInstance server = servers.get(serverId);
 
         if (server == null) {
-            return ApiError.badRequest("Server is not running");
+            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
         }
 
         return server.getServer().getDetailStats();
