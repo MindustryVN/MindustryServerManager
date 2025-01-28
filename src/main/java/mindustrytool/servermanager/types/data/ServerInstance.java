@@ -138,7 +138,7 @@ public class ServerInstance {
         }
 
         public Mono<GetServersMessageResponse> getServers(int page, int size) {
-            return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
+            return WebClient.create(backendUri("?page=%s&size=%s".formatted(page, size)))//
                     .get()//
                     .headers(this::setHeaders)//
                     .retrieve()//
