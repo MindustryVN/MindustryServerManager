@@ -139,15 +139,15 @@ public class ServerService {
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
+        var server = servers.get(request.getId());
+
+        String dockerContainerName = request.getId().toString() + "-" + request.getPort();
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withNameFilter(List.of(dockerContainerName))//
+                .exec();
+
         if (servers.containsKey(request.getId())) {
-            var server = servers.get(request.getId());
-            String dockerContainerName = request.getId().toString() + "-" + server.getPort();
-
-            var containers = dockerClient.listContainersCmd()//
-                    .withShowAll(true)//
-                    .withNameFilter(List.of(dockerContainerName))//
-                    .exec();
-
             if (!containers.isEmpty()) {
                 var container = containers.get(0);
 
@@ -155,27 +155,13 @@ public class ServerService {
                     log.info("Start container " + container.getNames());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
+
+                return Mono.just(modelMapper.map(server, ServerDto.class));
             } else {
                 log.warn("Container " + dockerContainerName + " is not running");
                 servers.remove(request.getId());
-
-                return Mono.error(new RuntimeException("Container is not running"));
             }
-
-            return Mono.just(modelMapper.map(server, ServerDto.class));
         }
-
-        if (request.getPort() == 0 && !envConfig.serverConfig().autoPortAssign()) {
-            return ApiError.badRequest("Port must be specified or autoPortAssign must be on");
-        }
-
-        int port = request.getPort();
-        String dockerContainerName = request.getId().toString() + "-" + port;
-
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withNameFilter(List.of(dockerContainerName))//
-                .exec();
 
         String containerId;
 
@@ -186,15 +172,15 @@ public class ServerService {
             Volume volume = new Volume("/config");
             Bind bind = new Bind(serverPath, volume);
 
-            ExposedPort tcp = ExposedPort.tcp(port);
-            ExposedPort udp = ExposedPort.udp(port);
+            ExposedPort tcp = ExposedPort.tcp(request.getPort());
+            ExposedPort udp = ExposedPort.udp(request.getPort());
 
             Ports portBindings = new Ports();
 
             portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
             portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
 
-            log.info("Create new container on port " + port);
+            log.info("Create new container on port " + request.getPort());
 
             var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
                     .withName(dockerContainerName)//
@@ -235,7 +221,7 @@ public class ServerService {
             }
         }
 
-        ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, port, request.isAutoTurnOff(), envConfig);
+        ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, request.getPort(), request.isAutoTurnOff(), envConfig);
 
         servers.put(request.getId(), server);
 
