@@ -70,7 +70,7 @@ public class ServerService {
         var shouldShowdown = shouldShutdownServer(server);
         if (shouldShowdown) {
             if (server.isKillFlag()) {
-                killServer(server.getId());
+                shutdown(server.getId());
             } else {
                 server.setKillFlag(true);
             }
@@ -114,7 +114,7 @@ public class ServerService {
                 .toList();
     }
 
-    public void killServer(UUID serverId) {
+    public void shutdown(UUID serverId) {
         servers.remove(serverId);
 
         var containers = findContainerByServerId(serverId);
@@ -126,6 +126,13 @@ public class ServerService {
 
     public Flux<ServerDto> getServers() {
         return Flux.fromIterable(servers.values())//
+                .flatMap(server -> server.getServer()//
+                        .getStats()//
+                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
+    }
+
+    public Mono<ServerDto> getServer(UUID id) {
+        return Mono.justOrEmpty(servers.get(id))//
                 .flatMap(server -> server.getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
@@ -353,7 +360,7 @@ public class ServerService {
         ServerInstance server = servers.get(serverId);
 
         if (server == null) {
-            return ApiError.badRequest("Server is not running");
+            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
         }
 
         return server.getServer().getStats();
@@ -363,7 +370,7 @@ public class ServerService {
         ServerInstance server = servers.get(serverId);
 
         if (server == null) {
-            return ApiError.badRequest("Server is not running");
+            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
         }
 
         return server.getServer().getDetailStats();
