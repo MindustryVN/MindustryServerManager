@@ -145,12 +145,12 @@ public class ServerInstance {
                     .map(server -> new GetServersMessageResponse().setServers(server));
         }
 
-        public Mono<Integer> host(UUID serverId) {
-            return WebClient.create(backendUri("servers", serverId.toString(), "start"))// a
+        public Mono<String> host(UUID serverId) {
+            return WebClient.create(backendUri("servers", serverId.toString(), "host-from-server"))// a
                     .post()//
                     .headers(this::setHeaders)//
                     .retrieve()//
-                    .bodyToMono(Integer.class);
+                    .bodyToMono(String.class);
         }
 
         public Mono<Void> onPlayerLeave(PlayerMessageRequest payload) {
