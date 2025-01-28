@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.codec.multipart.FilePart;
@@ -280,6 +281,8 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
+        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().flatMap(c -> Stream.of(c.getNames())).toList())));
+
         for (Container container : containers) {
             try {
                 var labels = container.getLabels();
@@ -297,6 +300,8 @@ public class ServerService {
                 ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
 
                 servers.put(request.getId(), server);
+
+                log.info("Loaded server: " + request.getName());
             } catch (Exception e) {
                 e.printStackTrace();
             }
