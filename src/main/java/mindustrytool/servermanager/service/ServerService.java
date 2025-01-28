@@ -152,7 +152,7 @@ public class ServerService {
             if (!containers.isEmpty()) {
                 var container = containers.get(0);
 
-                if (!container.getState().equalsIgnoreCase("running")) {
+                if (!container.getStatus().equalsIgnoreCase("running")) {
                     log.info("Start container " + container.getNames());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
@@ -216,7 +216,7 @@ public class ServerService {
             var container = containers.get(0);
             containerId = container.getId();
 
-            if (!container.getState().equalsIgnoreCase("running")) {
+            if (!container.getStatus().equalsIgnoreCase("running")) {
                 log.info("Start container " + container.getNames());
                 dockerClient.startContainerCmd(containerId).exec();
             }
@@ -287,7 +287,7 @@ public class ServerService {
             try {
                 var labels = container.getLabels();
 
-                if (!container.getState().equalsIgnoreCase("running")) {
+                if (!container.getStatus().equalsIgnoreCase("running")) {
                     log.info("Starting container " + container.getId());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
