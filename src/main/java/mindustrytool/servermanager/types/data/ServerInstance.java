@@ -20,6 +20,7 @@ import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
+import mindustrytool.servermanager.types.response.ApiServerDto;
 import reactor.core.publisher.Mono;
 
 @Data
@@ -137,11 +138,12 @@ public class ServerInstance {
         }
 
         public Mono<GetServersMessageResponse> getServers(int page, int size) {
-            return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
+            return WebClient.create(backendUri("?page=%s&size=%s".formatted(page, size)))//
                     .get()//
                     .headers(this::setHeaders)//
                     .retrieve()//
-                    .bodyToFlux(GetServersMessageResponse.ResponseData.class).collectList()//
+                    .bodyToFlux(ApiServerDto.class)//
+                    .collectList()//
                     .map(server -> new GetServersMessageResponse().setServers(server));
         }
 
