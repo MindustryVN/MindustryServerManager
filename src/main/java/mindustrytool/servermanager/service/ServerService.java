@@ -281,17 +281,16 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
-        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().flatMap(c -> Stream.of(c.getNames())).toList())));
+        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().map(c -> c.getNames()[0] + " - " + c.getStatus()).toList())));
 
         for (Container container : containers) {
             try {
-                var labels = container.getLabels();
-
                 if (!container.getStatus().equalsIgnoreCase("running")) {
                     log.info("Starting container " + container.getId());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
 
+                var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
 
                 String containerName = container.getNames()[0];
