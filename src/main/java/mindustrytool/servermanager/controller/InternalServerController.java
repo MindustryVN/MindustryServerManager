@@ -1,5 +1,7 @@
 package mindustrytool.servermanager.controller;
 
+import java.util.UUID;
+
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -37,6 +39,10 @@ public class InternalServerController {
     @PostMapping("console")
     public Mono<Void> sendConsole(@RequestBody String console) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().sendConsole(console));
+    }
+    @PostMapping("host")
+    public Mono<String> host(@RequestBody UUID serverId) {
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().host(serverId));
     }
 
     @PostMapping("player-leave")

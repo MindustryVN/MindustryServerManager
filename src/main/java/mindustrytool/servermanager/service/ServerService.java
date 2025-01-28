@@ -335,15 +335,21 @@ public class ServerService {
             return ApiError.badRequest("Server is not running");
         }
 
-        var preHostCommand = "stop \nconfig port %s \n config name %s \nconfig description %s".formatted(server.getPort(), server.getName(), server.getDescription());
+        var preHostCommand = "stop \nconfig port %s \n config name %s \nconfig desc %s".formatted(server.getPort(), server.getName(), server.getDescription());
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
-            return server.getServer().sendCommand(preHostCommand).thenMany(Flux.fromArray(commands)).concatMap(command -> server.getServer().sendCommand(command)).then();
+            return server.getServer()//
+                    .sendCommand(preHostCommand)//
+                    .thenMany(Flux.fromArray(commands))//
+                    .concatMap(command -> server.getServer().sendCommand(command))//
+                    .then();
         }
 
-        return server.getServer().sendCommand(preHostCommand).then(server.getServer().startServer(request));
+        return server.getServer()//
+                .sendCommand(preHostCommand)//
+                .then(server.getServer().host(request));
     }
 
     public Mono<Void> ok(UUID serverId) {

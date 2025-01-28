@@ -100,10 +100,10 @@ public class ServerInstance {
                     .then();
         }
 
-        public Mono<Void> startServer(StartServerMessageRequest request) {
+        public Mono<Void> host(StartServerMessageRequest request) {
             return WebClient.create(serverUri("host"))//
                     .post()//
-                    .bodyValue(request)//
+                    .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                     .retrieve()//
                     .bodyToMono(String.class)//
                     .then();
@@ -141,17 +141,16 @@ public class ServerInstance {
                     .get()//
                     .headers(this::setHeaders)//
                     .retrieve()//
-                    .bodyToFlux(GetServersMessageResponse.ResponseData.class)
-                    .collectList()//
+                    .bodyToFlux(GetServersMessageResponse.ResponseData.class).collectList()//
                     .map(server -> new GetServersMessageResponse().setServers(server));
         }
 
-        public Mono<Integer> startServer(UUID serverId) {
-            return WebClient.create(backendUri("servers", serverId.toString(), "start"))//a
+        public Mono<String> host(UUID serverId) {
+            return WebClient.create(backendUri("servers", serverId.toString(), "host-from-server"))// a
                     .post()//
                     .headers(this::setHeaders)//
                     .retrieve()//
-                    .bodyToMono(Integer.class);
+                    .bodyToMono(String.class);
         }
 
         public Mono<Void> onPlayerLeave(PlayerMessageRequest payload) {
