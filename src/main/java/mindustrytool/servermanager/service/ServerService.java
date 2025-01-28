@@ -221,7 +221,7 @@ public class ServerService {
             }
         }
 
-        ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, request.getPort(), request.isAutoTurnOff(), envConfig);
+        server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, request.getPort(), request.isAutoTurnOff(), envConfig);
 
         servers.put(request.getId(), server);
 
