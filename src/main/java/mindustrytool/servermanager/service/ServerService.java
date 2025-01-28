@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Stream;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.codec.multipart.FilePart;
@@ -151,7 +152,7 @@ public class ServerService {
             if (!containers.isEmpty()) {
                 var container = containers.get(0);
 
-                if (!container.getState().equalsIgnoreCase("running")) {
+                if (!container.getStatus().equalsIgnoreCase("running")) {
                     log.info("Start container " + container.getNames());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
@@ -215,7 +216,7 @@ public class ServerService {
             var container = containers.get(0);
             containerId = container.getId();
 
-            if (!container.getState().equalsIgnoreCase("running")) {
+            if (!container.getStatus().equalsIgnoreCase("running")) {
                 log.info("Start container " + container.getNames());
                 dockerClient.startContainerCmd(containerId).exec();
             }
@@ -280,11 +281,13 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
+        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().flatMap(c -> Stream.of(c.getNames())).toList())));
+
         for (Container container : containers) {
             try {
                 var labels = container.getLabels();
 
-                if (!container.getState().equalsIgnoreCase("running")) {
+                if (!container.getStatus().equalsIgnoreCase("running")) {
                     log.info("Starting container " + container.getId());
                     dockerClient.startContainerCmd(container.getId()).exec();
                 }
@@ -297,6 +300,8 @@ public class ServerService {
                 ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
 
                 servers.put(request.getId(), server);
+
+                log.info("Loaded server: " + request.getName());
             } catch (Exception e) {
                 e.printStackTrace();
             }
