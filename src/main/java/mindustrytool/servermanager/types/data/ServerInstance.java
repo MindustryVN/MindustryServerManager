@@ -1,6 +1,7 @@
 package mindustrytool.servermanager.types.data;
 
 import java.net.URI;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -67,6 +68,7 @@ public class ServerInstance {
                     .bodyValue(request)//
                     .retrieve()//
                     .bodyToMono(String.class)//
+                    .timeout(Duration.ofSeconds(5))//
                     .then();
         }
 
@@ -75,6 +77,7 @@ public class ServerInstance {
                     .get()//
                     .retrieve()//
                     .bodyToMono(String.class)//
+                    .timeout(Duration.ofSeconds(5))//
                     .then();
         }
 
@@ -82,14 +85,16 @@ public class ServerInstance {
             return WebClient.create(serverUri("stats"))//
                     .get()//
                     .retrieve()//
-                    .bodyToMono(StatsMessageResponse.class);
+                    .bodyToMono(StatsMessageResponse.class)//
+                    .timeout(Duration.ofSeconds(5));
         }
 
         public Mono<StatsMessageResponse> getDetailStats() {
             return WebClient.create(serverUri("detail-stats"))//
                     .get()//
                     .retrieve()//
-                    .bodyToMono(StatsMessageResponse.class);
+                    .bodyToMono(StatsMessageResponse.class)//
+                    .timeout(Duration.ofSeconds(5));
         }
 
         public Mono<Void> sendCommand(String command) {
@@ -98,6 +103,7 @@ public class ServerInstance {
                     .bodyValue(command)//
                     .retrieve()//
                     .bodyToMono(String.class)//
+                    .timeout(Duration.ofSeconds(5))//
                     .then();
         }
 
@@ -107,6 +113,7 @@ public class ServerInstance {
                     .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                     .retrieve()//
                     .bodyToMono(String.class)//
+                    .timeout(Duration.ofSeconds(5))//
                     .then();
         }
 
@@ -114,7 +121,8 @@ public class ServerInstance {
             return WebClient.create(serverUri("hosting"))//
                     .get()//
                     .retrieve()//
-                    .bodyToMono(Boolean.class);
+                    .bodyToMono(Boolean.class)//
+                    .timeout(Duration.ofSeconds(5));
         }
     }
 
