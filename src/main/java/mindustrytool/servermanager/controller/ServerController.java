@@ -79,9 +79,7 @@ public class ServerController {
 
     @GetMapping("/servers/{id}/shutdown")
     public Mono<Void> shutdown(@PathVariable("id") UUID serverId) {
-        serverService.shutdown(serverId);
-
-        return Mono.empty();
+        return serverService.shutdown(serverId);
     }
 
     @GetMapping("/servers/{id}/detail-stats")
