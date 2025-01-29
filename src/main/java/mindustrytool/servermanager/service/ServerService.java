@@ -114,14 +114,19 @@ public class ServerService {
                 .toList();
     }
 
-    public void shutdown(UUID serverId) {
+    public Mono<Void> shutdown(UUID serverId) {
         servers.remove(serverId);
 
         var containers = findContainerByServerId(serverId);
 
-        for (var container : containers) {
-            dockerClient.stopContainerCmd(container.getId()).exec();
-        }
+        log.info("Found %s container to stop".formatted(containers.size()));
+
+        return Flux.fromIterable(containers)//
+                .doOnNext(container -> {
+                    dockerClient.stopContainerCmd(container.getId()).exec();
+                    log.info("Stopped: " + container.getNames()[0]);
+                })//
+                .then();
     }
 
     public Flux<ServerDto> getServers() {
