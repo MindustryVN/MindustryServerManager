@@ -1,5 +1,7 @@
 package mindustrytool.servermanager.controller;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.springframework.http.MediaType;
@@ -54,7 +56,7 @@ public class ServerController {
 
     @DeleteMapping("/servers/{id}/files")
     Mono<Void> deleteFile(@PathVariable("id") UUID serverId, @RequestParam("path") String path) {
-        return serverService.deleteFile(serverId, path);
+        return serverService.deleteFile(serverId, URLDecoder.decode(path, StandardCharsets.UTF_8));
     }
 
     @PostMapping("/servers/{id}/command")
