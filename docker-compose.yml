@@ -1,30 +1,23 @@
-version: '3.8'
 services:
   server-manager:
+    image: ghcr.io/mindustryvn/mindustry-server-manager:latest
     container_name: server-manager
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - '8088:8088'
-    environment:
-      # JAVA_OPTS: -Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true
-      SPRING_PROFILES_ACTIVE: local
     restart: always
     networks:
+      - server-manager
       - mindustry-server
+    environment:
+      SECURITY_KEY: # Get this from mindustry-tool.com
+      ACCESS_TOKEN: # Get this from mindustry-tool.com
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /root/.docker/config.json:/config.json
       - /data:/data
-      - ./.gradle:/home/gradle/.gradle
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
 
 networks:
   mindustry-server:
     driver: bridge
     name: mindustry-server
-    external: true
-volumes:
-  gradle_cache:
+
+  server-manager:
+    driver: bridge

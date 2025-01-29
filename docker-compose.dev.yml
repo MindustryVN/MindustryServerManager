@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  server-manager:
+    container_name: server-manager
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - '8088:8088'
+    environment:
+      # JAVA_OPTS: -Dspring.devtools.restart.enabled=true -Dspring.devtools.livereload.enabled=true
+      SPRING_PROFILES_ACTIVE: local
+    restart: always
+    networks:
+      - mindustry-server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /root/.docker/config.json:/config.json
+      - /data:/data
+      - ./.gradle:/home/gradle/.gradle
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+
+networks:
+  mindustry-server:
+    driver: bridge
+    name: mindustry-server
+    external: true
+volumes:
+  gradle_cache:
