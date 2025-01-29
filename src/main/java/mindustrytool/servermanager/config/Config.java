@@ -32,6 +32,7 @@ public class Config implements WebFluxConfigurer {
 
     public static String volumeFolderPath = Config.IS_DEVELOPMENT ? "./data" : "/data";
     public static String serverLabelName = "com.mindustry-tool.server";
+    public static String serverIdLabel = "com.mindustry-tool.server.id";
     public static File volumeFolder = new File(volumeFolderPath);
 
     @PostConstruct

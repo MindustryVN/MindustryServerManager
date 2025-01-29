@@ -106,14 +106,9 @@ public class ServerService {
 
     public List<Container> findContainerByServerId(UUID serverId) {
         return dockerClient.listContainersCmd()//
-                .withLabelFilter(List.of(Config.serverLabelName))//
+                .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
                 .withShowAll(true)//
-                .exec()//
-                .stream()//++++++++++
-                .filter(container -> List.of(container.getNames())//
-                        .stream()//
-                        .anyMatch(name -> name.startsWith(serverId.toString())))//
-                .toList();
+                .exec();
     }
 
     public Mono<Void> shutdown(UUID serverId) {
@@ -151,7 +146,7 @@ public class ServerService {
         String dockerContainerName = request.getId().toString() + "-" + request.getPort();
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
-                .withNameFilter(List.of(dockerContainerName))//
+                .withLabelFilter(Map.of(Config.serverIdLabel, request.getId().toString()))//
                 .exec();
 
         if (servers.containsKey(request.getId())) {
@@ -192,7 +187,7 @@ public class ServerService {
             var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
                     .withName(dockerContainerName)//
                     .withAttachStdout(true)//
-                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request)));
+                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel, request.getId().toString()));
 
             if (Config.IS_DEVELOPMENT) {
                 ExposedPort localTcp = ExposedPort.tcp(9999);
