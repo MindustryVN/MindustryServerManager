@@ -172,13 +172,13 @@ public class ServerService {
             Volume volume = new Volume("/config");
             Bind bind = new Bind(serverPath, volume);
 
-            ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
-            ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
+            ExposedPort tcp = ExposedPort.tcp(request.getPort());
+            ExposedPort udp = ExposedPort.udp(request.getPort());
 
             Ports portBindings = new Ports();
 
-            portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
-            portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
+            portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
+            portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
 
             log.info("Create new container on port " + request.getPort());
 
