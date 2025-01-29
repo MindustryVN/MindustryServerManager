@@ -133,7 +133,7 @@ public class ServerInstance {
         }
 
         public String backendUri(String... resource) {
-            return URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/servers/" + String.join("/", resource)).toString();
+            return URI.create(String.join("/", envConfig.serverConfig().serverUrl(), "api/v3/servers", String.join("/", resource))).toString();
         }
 
         public Mono<SetPlayerMessageRequest> setPlayer(PlayerMessageRequest payload) {
