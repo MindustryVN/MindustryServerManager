@@ -106,6 +106,7 @@ public class ServerService {
 
     public List<Container> findContainerByServerId(UUID serverId) {
         return dockerClient.listContainersCmd()//
+                .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec()//
                 .stream()//
                 .filter(container -> List.of(container.getNames())//
