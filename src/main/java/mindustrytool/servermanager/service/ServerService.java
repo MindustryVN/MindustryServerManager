@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Stream;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.codec.multipart.FilePart;
@@ -173,13 +172,13 @@ public class ServerService {
             Volume volume = new Volume("/config");
             Bind bind = new Bind(serverPath, volume);
 
-            ExposedPort tcp = ExposedPort.tcp(request.getPort());
-            ExposedPort udp = ExposedPort.udp(request.getPort());
+            ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
+            ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
 
             Ports portBindings = new Ports();
 
-            portBindings.bind(tcp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
-            portBindings.bind(udp, Ports.Binding.bindPort(Config.DEFAULT_MINDUSTRY_SERVER_PORT));
+            portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
+            portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
 
             log.info("Create new container on port " + request.getPort());
 
@@ -326,7 +325,7 @@ public class ServerService {
             return ApiError.badRequest("Server is not running");
         }
 
-        var preHostCommand = "stop \nconfig port %s \n config name %s \nconfig desc %s".formatted(server.getPort(), server.getName(), server.getDescription());
+        var preHostCommand = "stop \n config name %s \nconfig desc %s".formatted(server.getName(), server.getDescription());
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
