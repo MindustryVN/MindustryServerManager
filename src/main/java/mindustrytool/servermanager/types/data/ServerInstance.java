@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -133,11 +134,11 @@ public class ServerInstance {
         }
 
         public String backendUri(String... resource) {
-            return URI.create(String.join("/", envConfig.serverConfig().serverUrl(), "api/v3/servers", String.join("/", resource))).toString();
+            return UriComponentsBuilder.fromHttpUrl(String.join("/", envConfig.serverConfig().serverUrl(), "api/v3", String.join("/", resource))).build().toUriString();
         }
 
         public Mono<SetPlayerMessageRequest> setPlayer(PlayerMessageRequest payload) {
-            return WebClient.create(backendUri("players"))//
+            return WebClient.create(backendUri("servers/players"))//
                     .post()//
                     .headers(this::setHeaders)//
                     .bodyValue(payload)//
@@ -146,7 +147,7 @@ public class ServerInstance {
         }
 
         public Mono<GetServersMessageResponse> getServers(int page, int size) {
-            return WebClient.create(backendUri("?page=%s&size=%s".formatted(page, size)))//
+            return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
                     .get()//
                     .headers(this::setHeaders)//
                     .retrieve()//
@@ -205,7 +206,7 @@ public class ServerInstance {
         }
 
         public Mono<Void> sendChat(String chat) {
-            return WebClient.create(backendUri("chat"))//
+            return WebClient.create(backendUri("servers", "chat"))//
                     .post()//
                     .headers(this::setHeaders)//
                     .bodyValue(chat)//
@@ -215,7 +216,7 @@ public class ServerInstance {
         }
 
         public Mono<Void> sendConsole(String console) {
-            return WebClient.create(backendUri("console"))//
+            return WebClient.create(backendUri("servers", "console"))//
                     .post()//
                     .headers(this::setHeaders)//
                     .bodyValue(console)//
@@ -225,7 +226,7 @@ public class ServerInstance {
         }
 
         public Mono<Integer> getTotalPlayer() {
-            return WebClient.create(backendUri("total-player"))//
+            return WebClient.create(backendUri("servers", "total-player"))//
                     .post()//
                     .headers(this::setHeaders)//
                     .retrieve()//
