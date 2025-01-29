@@ -106,8 +106,10 @@ public class ServerService {
 
     public List<Container> findContainerByServerId(UUID serverId) {
         return dockerClient.listContainersCmd()//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .withShowAll(true)//
                 .exec()//
-                .stream()//
+                .stream()//++++++++++
                 .filter(container -> List.of(container.getNames())//
                         .stream()//
                         .anyMatch(name -> name.startsWith(serverId.toString())))//
@@ -238,16 +240,6 @@ public class ServerService {
                 .isHosting()//
                 .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
                 .thenReturn(modelMapper.map(server, ServerDto.class));
-    }
-
-    public Mono<Void> stopServer(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return Mono.empty();
     }
 
     public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {
