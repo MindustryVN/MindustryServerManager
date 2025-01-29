@@ -2,6 +2,7 @@ package mindustrytool.servermanager.controller;
 
 import java.util.UUID;
 
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,7 +22,7 @@ import reactor.core.publisher.Mono;
 @RequiredArgsConstructor
 public class InternalServerController {
 
-    @PostMapping("players")
+    @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(payload));
     }
@@ -40,17 +41,18 @@ public class InternalServerController {
     public Mono<Void> sendConsole(@RequestBody String console) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().sendConsole(console));
     }
-    @PostMapping("host")
+
+    @PostMapping(value = "host", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<String> host(@RequestBody UUID serverId) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().host(serverId));
     }
 
-    @PostMapping("player-leave")
+    @PostMapping(value = "player-leave", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Void> onPlayerLeave(@RequestBody PlayerMessageRequest request) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().onPlayerLeave(request));
     }
 
-    @PostMapping("player-join")
+    @PostMapping(value = "player-join", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Void> onPlayerJoin(@RequestBody PlayerMessageRequest request) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().onPlayerJoin(request));
     }
