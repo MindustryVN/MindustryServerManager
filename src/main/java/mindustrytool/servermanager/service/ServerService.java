@@ -216,8 +216,10 @@ public class ServerService {
             var container = containers.get(0);
             containerId = container.getId();
 
+            log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
+
             if (!container.getState().equalsIgnoreCase("running")) {
-                log.info("Start container " + container.getNames());
+                log.info("Start container " + container.getNames()[0]);
                 dockerClient.startContainerCmd(containerId).exec();
             }
         }
@@ -379,6 +381,5 @@ public class ServerService {
         }
 
         return server.getServer().setPlayer(payload);
-
     }
 }
