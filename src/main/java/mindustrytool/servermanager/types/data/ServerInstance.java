@@ -156,8 +156,8 @@ public class ServerInstance {
                     .map(server -> new GetServersMessageResponse().setServers(server));
         }
 
-        public Mono<String> host(UUID serverId) {
-            return WebClient.create(backendUri("servers", serverId.toString(), "host-from-server"))// a
+        public Mono<String> host(String serverId) {
+            return WebClient.create(backendUri("servers", serverId, "host-from-server"))// a
                     .post()//
                     .headers(this::setHeaders)//
                     .retrieve()//

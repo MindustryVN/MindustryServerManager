@@ -42,8 +42,8 @@ public class InternalServerController {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().sendConsole(console));
     }
 
-    @PostMapping(value = "host", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<String> host(@RequestBody UUID serverId) {
+    @PostMapping(value = "host", consumes = MediaType.TEXT_PLAIN_VALUE)
+    public Mono<String> host(@RequestBody String serverId) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().host(serverId));
     }
 
