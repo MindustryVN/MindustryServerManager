@@ -319,7 +319,10 @@ public class ServerService {
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
         return initServer(request.getInit())//
                 .delayElement(Duration.ofSeconds(1))//
-                .then(host(serverId, request.getHost()));
+                .then(gatewayService.of(serverId).getServer().isHosting())//
+                .flatMap(isHosting -> isHosting //
+                        ? Mono.empty()
+                        : host(serverId, request.getHost()));
     }
 
     public Mono<Void> host(UUID serverId, StartServerMessageRequest request) {
@@ -330,15 +333,15 @@ public class ServerService {
         }
 
         var gateway = gatewayService.of(serverId);
-        var preHostCommand = "stop \n config name %s \nconfig desc %s".formatted(server.getName(), server.getDescription());
+
+        String[] preHostCommand = { "stop", "config name %".formatted(server.getName()), "config desc %s".formatted(server.getDescription()) };
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
-                    .thenMany(Flux.fromArray(commands))//
-                    .concatMap(command -> gateway.getServer().sendCommand(command))//
+                    .then(gateway.getServer().sendCommand(commands))//
                     .then();
         }
 
