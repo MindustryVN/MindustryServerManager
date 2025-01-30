@@ -22,6 +22,7 @@ import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
+import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
@@ -38,6 +39,11 @@ public class ServerController {
     @GetMapping("/servers/{id}")
     public Mono<ServerDto> getServer(@PathVariable("id") UUID serverId) {
         return serverService.getServer(serverId);
+    }
+
+    @GetMapping("/servers/{id}/players")
+    public Flux<Player> getServerPlayers(@PathVariable("id") UUID serverId) {
+        return serverService.getPlayers(serverId);
     }
 
     @GetMapping("/servers")

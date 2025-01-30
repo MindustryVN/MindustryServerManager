@@ -90,17 +90,6 @@ public class ServerService {
                 .forEach(server -> handleServerShutdown(server));
     }
 
-    public Flux<Player> getPlayers(UUID id) {
-        var instance = servers.get(id);
-
-        if (instance == null) {
-            return Flux.empty();
-        }
-
-        return Flux.fromIterable(instance.getPlayers())//
-                .filter(player -> player.getLeaveAt() == null);
-    }
-
     @PostConstruct
     private void init() {
         loadRunningServers();
@@ -143,6 +132,10 @@ public class ServerService {
                         .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
+    }
+
+    public Flux<Player> getPlayers(UUID id) {
+        return gatewayService.of(id).getServer().getPlayers();
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
