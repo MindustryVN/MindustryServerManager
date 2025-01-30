@@ -143,7 +143,7 @@ public class ServerService {
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
-        if (request.getPort() < 10000) {
+        if (request.getPort() <= 0) {
             throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
         }
 
