@@ -364,7 +364,7 @@ public class ServerService {
         return server.getServer().getDetailStats();
     }
 
-    public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
+public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
         ServerInstance server = servers.get(serverId);
 
         if (server == null) {
