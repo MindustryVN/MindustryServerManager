@@ -326,7 +326,9 @@ public class ServerService {
     }
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
-        return initServer(request.getInit()).then(host(serverId, request.getHost()));
+        return initServer(request.getInit())//
+                .delayElement(Duration.ofSeconds(1))//
+                .then(host(serverId, request.getHost()));
     }
 
     public Mono<Void> host(UUID serverId, StartServerMessageRequest request) {
