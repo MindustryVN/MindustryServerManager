@@ -24,7 +24,7 @@ public class InternalServerController {
 
     @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(payload));
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(server.getId(), payload));
     }
 
     @GetMapping("total-player")
