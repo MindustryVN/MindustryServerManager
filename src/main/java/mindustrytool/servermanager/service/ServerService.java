@@ -147,87 +147,40 @@ public class ServerService {
             throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
         }
 
+        String containerId;
         var server = servers.get(request.getId());
 
-        String dockerContainerName = request.getId().toString() + "-" + request.getPort();
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(Map.of(Config.serverIdLabel, request.getId().toString()))//
                 .exec();
 
-        if (servers.containsKey(request.getId())) {
-            if (!containers.isEmpty()) {
-                var container = containers.get(0);
-
-                if (!container.getState().equalsIgnoreCase("running")) {
-                    log.info("Start container " + container.getNames());
-                    dockerClient.startContainerCmd(container.getId()).exec();
-                }
-
-                return Mono.just(modelMapper.map(server, ServerDto.class));
-            } else {
-                log.warn("Container " + dockerContainerName + " is not running");
-                servers.remove(request.getId());
-            }
+        if (servers.containsKey(request.getId()) && containers.isEmpty()) {
+            log.warn("Container " + request.getId() + " got deleted, creating new");
+            servers.remove(request.getId());
+            containerId = createNewServerContainer(request);
         }
 
-        String containerId;
-
         if (containers.isEmpty()) {
-            String serverId = request.getId().toString();
-            String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
-
-            Volume volume = new Volume("/config");
-            Bind bind = new Bind(serverPath, volume);
-
-            ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
-            ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
-
-            Ports portBindings = new Ports();
-
-            portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
-            portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
-
-            log.info("Create new container on port " + request.getPort());
-
-            var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
-                    .withName(dockerContainerName)//
-                    .withAttachStdout(true)//
-                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel, request.getId().toString()));
-
-            if (Config.IS_DEVELOPMENT) {
-                ExposedPort localTcp = ExposedPort.tcp(9999);
-                portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
-
-                command.withExposedPorts(tcp, udp, localTcp)//
-                        .withEnv("SERVER_ID=" + serverId, "ENV=DEV")//
-                        .withHostConfig(HostConfig.newHostConfig()//
-                                .withPortBindings(portBindings)//
-                                .withNetworkMode("mindustry-server")//
-                                .withBinds(bind));
-            } else {
-                command.withExposedPorts(tcp, udp)//
-                        .withEnv("SERVER_ID=" + serverId)//
-                        .withHostConfig(HostConfig.newHostConfig()//
-                                .withPortBindings(portBindings)//
-                                .withNetworkMode("mindustry-server")//
-                                .withBinds(bind));
-            }
-
-            var result = command.exec();
-
-            containerId = result.getId();
-            dockerClient.startContainerCmd(containerId).exec();
-
+            containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
             containerId = container.getId();
 
-            log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
+            var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
-            if (!container.getState().equalsIgnoreCase("running")) {
-                log.info("Start container " + container.getNames()[0]);
-                dockerClient.startContainerCmd(containerId).exec();
+            if (oldRequest != null && oldRequest.getPort() != request.getPort()) {
+                log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container" + container.getState());
+
+                dockerClient.removeContainerCmd(containerId).exec();
+                containerId = createNewServerContainer(request);
+            } else {
+                log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
+
+                if (!container.getState().equalsIgnoreCase("running")) {
+                    log.info("Start container " + container.getNames()[0]);
+                    dockerClient.startContainerCmd(containerId).exec();
+                }
             }
         }
 
@@ -241,6 +194,56 @@ public class ServerService {
                 .isHosting()//
                 .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
                 .thenReturn(modelMapper.map(server, ServerDto.class));
+    }
+
+    private String createNewServerContainer(InitServerRequest request) {
+        String serverId = request.getId().toString();
+        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
+
+        Volume volume = new Volume("/config");
+        Bind bind = new Bind(serverPath, volume);
+
+        ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
+        ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
+
+        Ports portBindings = new Ports();
+
+        portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
+        portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
+
+        log.info("Create new container on port " + request.getPort());
+
+        var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
+                .withName(request.getId().toString())//
+                .withAttachStdout(true)//
+                .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel, request.getId().toString()));
+
+        if (Config.IS_DEVELOPMENT) {
+            ExposedPort localTcp = ExposedPort.tcp(9999);
+            portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
+
+            command.withExposedPorts(tcp, udp, localTcp)//
+                    .withEnv("SERVER_ID=" + serverId, "ENV=DEV")//
+                    .withHostConfig(HostConfig.newHostConfig()//
+                            .withPortBindings(portBindings)//
+                            .withNetworkMode("mindustry-server")//
+                            .withBinds(bind));
+        } else {
+            command.withExposedPorts(tcp, udp)//
+                    .withEnv("SERVER_ID=" + serverId)//
+                    .withHostConfig(HostConfig.newHostConfig()//
+                            .withPortBindings(portBindings)//
+                            .withNetworkMode("mindustry-server")//
+                            .withBinds(bind));
+        }
+
+        var result = command.exec();
+
+        var containerId = result.getId();
+
+        dockerClient.startContainerCmd(containerId).exec();
+
+        return containerId;
     }
 
     public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {

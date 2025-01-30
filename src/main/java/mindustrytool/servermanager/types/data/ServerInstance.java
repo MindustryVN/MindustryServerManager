@@ -60,7 +60,7 @@ public class ServerInstance {
     public class Server {
         @JsonIgnore
         public String serverUri(String... resource) {
-            return URI.create((Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + "-" + port + ":9999/") + String.join("/", resource)).toString();
+            return URI.create((Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + ":9999/") + String.join("/", resource)).toString();
         }
 
         public Mono<Void> setPlayer(SetPlayerMessageRequest request) {
