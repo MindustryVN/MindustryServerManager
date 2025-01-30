@@ -334,7 +334,7 @@ public class ServerService {
 
         var gateway = gatewayService.of(serverId);
 
-        String[] preHostCommand = { "stop", "config name %".formatted(server.getName()), "config desc %s".formatted(server.getDescription()) };
+        String[] preHostCommand = { "stop", "config name %s".formatted(server.getName()), "config desc %s".formatted(server.getDescription()) };
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
