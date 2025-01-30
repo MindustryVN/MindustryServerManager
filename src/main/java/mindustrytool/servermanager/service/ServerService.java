@@ -306,7 +306,7 @@ public class ServerService {
 
                 servers.put(request.getId(), server);
 
-                log.info("Loaded server: " + request.getName());
+                log.info("Loaded server: " + request);
             } catch (Exception e) {
                 e.printStackTrace();
             }
