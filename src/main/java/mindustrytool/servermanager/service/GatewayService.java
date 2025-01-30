@@ -81,7 +81,9 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(String.class)//
                         .timeout(Duration.ofSeconds(5))//
-                        .then();
+                        .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
+                        .then();//
+
             }
 
             public Mono<StatsMessageResponse> getStats() {

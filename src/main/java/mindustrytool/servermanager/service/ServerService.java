@@ -190,7 +190,7 @@ public class ServerService {
 
         return gatewayService.of(server.getId())//
                 .getServer()//
-                .isHosting()//
+                .ok()//
                 .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
                 .thenReturn(modelMapper.map(server, ServerDto.class));
     }
