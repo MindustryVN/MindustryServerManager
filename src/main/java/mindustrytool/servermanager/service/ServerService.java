@@ -32,6 +32,7 @@ import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerInstance;
+import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.utils.ApiError;
@@ -321,6 +322,10 @@ public class ServerService {
         }
 
         return server.getServer().sendCommand(command);
+    }
+
+    public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
+        return initServer(request.getInit()).then(host(serverId, request.getHost()));
     }
 
     public Mono<Void> host(UUID serverId, StartServerMessageRequest request) {
