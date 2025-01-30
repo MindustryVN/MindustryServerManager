@@ -153,11 +153,9 @@ public class ServerService {
                 .withLabelFilter(Map.of(Config.serverIdLabel, request.getId().toString()))//
                 .exec();
 
-        if (servers.containsKey(request.getId()) && containers.isEmpty()) {
+        if (containers.isEmpty()) {
             log.warn("Container " + request.getId() + " got deleted, creating new");
             servers.remove(request.getId());
-            containerId = createNewServerContainer(request);
-        } else if (containers.isEmpty()) {
             containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
