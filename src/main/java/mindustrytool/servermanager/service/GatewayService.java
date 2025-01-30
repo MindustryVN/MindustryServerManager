@@ -25,6 +25,7 @@ import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.response.ApiServerDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 @Slf4j
 @Service
@@ -80,7 +81,9 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(String.class)//
                         .timeout(Duration.ofSeconds(5))//
-                        .then();
+                        .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
+                        .then();//
+
             }
 
             public Mono<StatsMessageResponse> getStats() {
@@ -124,7 +127,8 @@ public class GatewayService {
                         .get()//
                         .retrieve()//
                         .bodyToMono(Boolean.class)//
-                        .timeout(Duration.ofSeconds(5));
+                        .timeout(Duration.ofSeconds(5))//
+                        .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)));
             }
         }
 
