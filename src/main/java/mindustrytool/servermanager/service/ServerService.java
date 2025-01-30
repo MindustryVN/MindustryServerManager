@@ -319,7 +319,10 @@ public class ServerService {
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
         return initServer(request.getInit())//
                 .delayElement(Duration.ofSeconds(1))//
-                .then(host(serverId, request.getHost()));
+                .then(gatewayService.of(serverId).getServer().isHosting())//
+                .flatMap(isHosting -> isHosting //
+                        ? Mono.empty()
+                        : host(serverId, request.getHost()));
     }
 
     public Mono<Void> host(UUID serverId, StartServerMessageRequest request) {
