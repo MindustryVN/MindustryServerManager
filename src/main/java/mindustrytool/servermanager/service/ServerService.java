@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -142,6 +143,10 @@ public class ServerService {
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
+        if (request.getPort() < 10000) {
+            throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
+        }
+
         var server = servers.get(request.getId());
 
         String dockerContainerName = request.getId().toString() + "-" + request.getPort();
