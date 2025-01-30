@@ -50,8 +50,9 @@ public class ServerService {
     private final DockerClient dockerClient;
     private final EnvConfig envConfig;
     private final ModelMapper modelMapper;
+    private final GatewayService gatewayService;
 
-    private ConcurrentHashMap<UUID, ServerInstance> servers = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<UUID, ServerInstance> servers = new ConcurrentHashMap<>();
 
     public ServerInstance getServerById(UUID serverId) {
         return servers.get(serverId);
@@ -130,14 +131,16 @@ public class ServerService {
 
     public Flux<ServerDto> getServers() {
         return Flux.fromIterable(servers.values())//
-                .flatMap(server -> server.getServer()//
+                .flatMap(server -> gatewayService.of(server.getId())//
+                        .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
     }
 
     public Mono<ServerDto> getServer(UUID id) {
         return Mono.justOrEmpty(servers.get(id))//
-                .flatMap(server -> server.getServer()//
+                .flatMap(server -> gatewayService.of(id)//
+                        .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
     }
@@ -190,7 +193,8 @@ public class ServerService {
 
         log.info("Created server: " + request.getName());
 
-        return server.getServer()//
+        return gatewayService.of(server.getId())//
+                .getServer()//
                 .isHosting()//
                 .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
                 .thenReturn(modelMapper.map(server, ServerDto.class));
@@ -323,13 +327,7 @@ public class ServerService {
     }
 
     public Mono<Void> sendCommand(UUID serverId, String command) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return server.getServer().sendCommand(command);
+        return gatewayService.of(serverId).getServer().sendCommand(command);
     }
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
@@ -343,60 +341,37 @@ public class ServerService {
             return ApiError.badRequest("Server is not running");
         }
 
+        var gateway = gatewayService.of(serverId);
         var preHostCommand = "stop \n config name %s \nconfig desc %s".formatted(server.getName(), server.getDescription());
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
-            return server.getServer()//
+            return gateway.getServer()//
                     .sendCommand(preHostCommand)//
                     .thenMany(Flux.fromArray(commands))//
-                    .concatMap(command -> server.getServer().sendCommand(command))//
+                    .concatMap(command -> gateway.getServer().sendCommand(command))//
                     .then();
         }
 
-        return server.getServer()//
+        return gateway.getServer()//
                 .sendCommand(preHostCommand)//
-                .then(server.getServer().host(request));
+                .then(gateway.getServer().host(request));
     }
 
     public Mono<Void> ok(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return server.getServer().ok();
+        return gatewayService.of(serverId).getServer().ok();
     }
 
     public Mono<StatsMessageResponse> stats(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
-        }
-
-        return server.getServer().getStats();
+        return gatewayService.of(serverId).getServer().getStats();
     }
 
     public Mono<StatsMessageResponse> detailStats(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
-        }
-
-        return server.getServer().getDetailStats();
+        return gatewayService.of(serverId).getServer().getDetailStats();
     }
 
     public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return server.getServer().setPlayer(payload);
+        return gatewayService.of(serverId).getServer().setPlayer(payload);
     }
 }

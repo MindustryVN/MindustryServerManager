@@ -10,8 +10,8 @@ import org.springframework.web.server.WebFilterChain;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import mindustrytool.servermanager.service.ServerService;
-import mindustrytool.servermanager.types.data.ServerInstance;
+import mindustrytool.servermanager.service.GatewayService;
+import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Mono;
 import reactor.util.context.Context;
@@ -22,11 +22,11 @@ import reactor.util.context.Context;
 @RequiredArgsConstructor
 public class ServerFilter implements WebFilter {
 
-    public static final Class<?> CONTEXT_KEY = ServerInstance.class;
+    public static final Class<?> CONTEXT_KEY = GatewayClient.class;
 
-    private final ServerService serverService;
+    private final GatewayService gatewayService;
 
-    public static Mono<ServerInstance> getContext() {
+    public static Mono<GatewayClient> getContext() {
         return Mono.deferContextual(Mono::just)//
                 .cast(Context.class)//
                 .filter(ServerFilter::hasContext)//
@@ -37,11 +37,11 @@ public class ServerFilter implements WebFilter {
         return context.hasKey(CONTEXT_KEY);
     }
 
-    private static Mono<ServerInstance> getContext(Context context) {
-        return context.<Mono<ServerInstance>>get(CONTEXT_KEY);
+    private static Mono<GatewayClient> getContext(Context context) {
+        return context.<Mono<GatewayClient>>get(CONTEXT_KEY);
     }
 
-    public static Context withRequest(Mono<? extends ServerInstance> request) {
+    public static Context withRequest(Mono<? extends GatewayClient> request) {
         return Context.of(CONTEXT_KEY, request);
     }
 
@@ -59,15 +59,9 @@ public class ServerFilter implements WebFilter {
             }
 
             UUID serverId = UUID.fromString(serverIdHeader);
-            var server = serverService.getServerById(serverId);
+            var gateway = gatewayService.of(serverId);
 
-            if (server == null) {
-                log.warn("Request to %s with invalid X-SERVER-ID: %s header or server not exist".formatted(uri, serverId));
-
-                return ApiError.badRequest("Invalid server id, server not exist");
-            }
-
-            return chain.filter(exchange).contextWrite(withRequest(Mono.just(server)));
+            return chain.filter(exchange).contextWrite(withRequest(Mono.just(gateway)));
         }
         return chain.filter(exchange);
     }
