@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.modelmapper.ModelMapper;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -49,8 +50,9 @@ public class ServerService {
     private final DockerClient dockerClient;
     private final EnvConfig envConfig;
     private final ModelMapper modelMapper;
+    private final GatewayService gatewayService;
 
-    private ConcurrentHashMap<UUID, ServerInstance> servers = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<UUID, ServerInstance> servers = new ConcurrentHashMap<>();
 
     public ServerInstance getServerById(UUID serverId) {
         return servers.get(serverId);
@@ -88,17 +90,6 @@ public class ServerService {
                 .forEach(server -> handleServerShutdown(server));
     }
 
-    public Flux<Player> getPlayers(UUID id) {
-        var instance = servers.get(id);
-
-        if (instance == null) {
-            return Flux.empty();
-        }
-
-        return Flux.fromIterable(instance.getPlayers())//
-                .filter(player -> player.getLeaveAt() == null);
-    }
-
     @PostConstruct
     private void init() {
         loadRunningServers();
@@ -129,100 +120,63 @@ public class ServerService {
 
     public Flux<ServerDto> getServers() {
         return Flux.fromIterable(servers.values())//
-                .flatMap(server -> server.getServer()//
+                .flatMap(server -> gatewayService.of(server.getId())//
+                        .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
     }
 
     public Mono<ServerDto> getServer(UUID id) {
         return Mono.justOrEmpty(servers.get(id))//
-                .flatMap(server -> server.getServer()//
+                .flatMap(server -> gatewayService.of(id)//
+                        .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
     }
 
+    public Flux<Player> getPlayers(UUID id) {
+        return gatewayService.of(id).getServer().getPlayers();
+    }
+
     public Mono<ServerDto> initServer(InitServerRequest request) {
+        if (request.getPort() <= 0) {
+            throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
+        }
+
+        String containerId;
         var server = servers.get(request.getId());
 
-        String dockerContainerName = request.getId().toString() + "-" + request.getPort();
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(Map.of(Config.serverIdLabel, request.getId().toString()))//
                 .exec();
 
-        if (servers.containsKey(request.getId())) {
-            if (!containers.isEmpty()) {
-                var container = containers.get(0);
-
-                if (!container.getState().equalsIgnoreCase("running")) {
-                    log.info("Start container " + container.getNames());
-                    dockerClient.startContainerCmd(container.getId()).exec();
-                }
-
-                return Mono.just(modelMapper.map(server, ServerDto.class));
-            } else {
-                log.warn("Container " + dockerContainerName + " is not running");
-                servers.remove(request.getId());
-            }
+        if (servers.containsKey(request.getId()) && containers.isEmpty()) {
+            log.warn("Container " + request.getId() + " got deleted, creating new");
+            servers.remove(request.getId());
+            containerId = createNewServerContainer(request);
         }
 
-        String containerId;
-
         if (containers.isEmpty()) {
-            String serverId = request.getId().toString();
-            String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
-
-            Volume volume = new Volume("/config");
-            Bind bind = new Bind(serverPath, volume);
-
-            ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
-            ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
-
-            Ports portBindings = new Ports();
-
-            portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
-            portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
-
-            log.info("Create new container on port " + request.getPort());
-
-            var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
-                    .withName(dockerContainerName)//
-                    .withAttachStdout(true)//
-                    .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel, request.getId().toString()));
-
-            if (Config.IS_DEVELOPMENT) {
-                ExposedPort localTcp = ExposedPort.tcp(9999);
-                portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
-
-                command.withExposedPorts(tcp, udp, localTcp)//
-                        .withEnv("SERVER_ID=" + serverId, "ENV=DEV")//
-                        .withHostConfig(HostConfig.newHostConfig()//
-                                .withPortBindings(portBindings)//
-                                .withNetworkMode("mindustry-server")//
-                                .withBinds(bind));
-            } else {
-                command.withExposedPorts(tcp, udp)//
-                        .withEnv("SERVER_ID=" + serverId)//
-                        .withHostConfig(HostConfig.newHostConfig()//
-                                .withPortBindings(portBindings)//
-                                .withNetworkMode("mindustry-server")//
-                                .withBinds(bind));
-            }
-
-            var result = command.exec();
-
-            containerId = result.getId();
-            dockerClient.startContainerCmd(containerId).exec();
-
+            containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
             containerId = container.getId();
 
-            log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
+            var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
-            if (!container.getState().equalsIgnoreCase("running")) {
-                log.info("Start container " + container.getNames()[0]);
-                dockerClient.startContainerCmd(containerId).exec();
+            if (oldRequest != null && oldRequest.getPort() != request.getPort()) {
+                log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container" + container.getState());
+
+                dockerClient.removeContainerCmd(containerId).exec();
+                containerId = createNewServerContainer(request);
+            } else {
+                log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
+
+                if (!container.getState().equalsIgnoreCase("running")) {
+                    log.info("Start container " + container.getNames()[0]);
+                    dockerClient.startContainerCmd(containerId).exec();
+                }
             }
         }
 
@@ -232,10 +186,61 @@ public class ServerService {
 
         log.info("Created server: " + request.getName());
 
-        return server.getServer()//
+        return gatewayService.of(server.getId())//
+                .getServer()//
                 .isHosting()//
                 .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
                 .thenReturn(modelMapper.map(server, ServerDto.class));
+    }
+
+    private String createNewServerContainer(InitServerRequest request) {
+        String serverId = request.getId().toString();
+        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
+
+        Volume volume = new Volume("/config");
+        Bind bind = new Bind(serverPath, volume);
+
+        ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
+        ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
+
+        Ports portBindings = new Ports();
+
+        portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
+        portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
+
+        log.info("Create new container on port " + request.getPort());
+
+        var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
+                .withName(request.getId().toString())//
+                .withAttachStdout(true)//
+                .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel, request.getId().toString()));
+
+        if (Config.IS_DEVELOPMENT) {
+            ExposedPort localTcp = ExposedPort.tcp(9999);
+            portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
+
+            command.withExposedPorts(tcp, udp, localTcp)//
+                    .withEnv("SERVER_ID=" + serverId, "ENV=DEV")//
+                    .withHostConfig(HostConfig.newHostConfig()//
+                            .withPortBindings(portBindings)//
+                            .withNetworkMode("mindustry-server")//
+                            .withBinds(bind));
+        } else {
+            command.withExposedPorts(tcp, udp)//
+                    .withEnv("SERVER_ID=" + serverId)//
+                    .withHostConfig(HostConfig.newHostConfig()//
+                            .withPortBindings(portBindings)//
+                            .withNetworkMode("mindustry-server")//
+                            .withBinds(bind));
+        }
+
+        var result = command.exec();
+
+        var containerId = result.getId();
+
+        dockerClient.startContainerCmd(containerId).exec();
+
+        return containerId;
     }
 
     public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {
@@ -315,13 +320,7 @@ public class ServerService {
     }
 
     public Mono<Void> sendCommand(UUID serverId, String command) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return server.getServer().sendCommand(command);
+        return gatewayService.of(serverId).getServer().sendCommand(command);
     }
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
@@ -335,60 +334,37 @@ public class ServerService {
             return ApiError.badRequest("Server is not running");
         }
 
+        var gateway = gatewayService.of(serverId);
         var preHostCommand = "stop \n config name %s \nconfig desc %s".formatted(server.getName(), server.getDescription());
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
-            return server.getServer()//
+            return gateway.getServer()//
                     .sendCommand(preHostCommand)//
                     .thenMany(Flux.fromArray(commands))//
-                    .concatMap(command -> server.getServer().sendCommand(command))//
+                    .concatMap(command -> gateway.getServer().sendCommand(command))//
                     .then();
         }
 
-        return server.getServer()//
+        return gateway.getServer()//
                 .sendCommand(preHostCommand)//
-                .then(server.getServer().host(request));
+                .then(gateway.getServer().host(request));
     }
 
     public Mono<Void> ok(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return server.getServer().ok();
+        return gatewayService.of(serverId).getServer().ok();
     }
 
     public Mono<StatsMessageResponse> stats(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
-        }
-
-        return server.getServer().getStats();
+        return gatewayService.of(serverId).getServer().getStats();
     }
 
     public Mono<StatsMessageResponse> detailStats(UUID serverId) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return Mono.just(new StatsMessageResponse().setPlayers(0).setStatus("DOWN"));
-        }
-
-        return server.getServer().getDetailStats();
+        return gatewayService.of(serverId).getServer().getDetailStats();
     }
 
     public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
-        ServerInstance server = servers.get(serverId);
-
-        if (server == null) {
-            return ApiError.badRequest("Server is not running");
-        }
-
-        return server.getServer().setPlayer(payload);
+        return gatewayService.of(serverId).getServer().setPlayer(payload);
     }
 }
