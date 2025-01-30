@@ -102,7 +102,7 @@ public class GatewayService {
                         .timeout(Duration.ofSeconds(5));
             }
 
-            public Mono<Void> sendCommand(String command) {
+            public Mono<Void> sendCommand(String ...command) {
                 return WebClient.create(serverUri("command"))//
                         .post()//
                         .bodyValue(command)//

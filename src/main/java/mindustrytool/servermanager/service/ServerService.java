@@ -333,15 +333,15 @@ public class ServerService {
         }
 
         var gateway = gatewayService.of(serverId);
-        var preHostCommand = "stop \n config name %s \nconfig desc %s".formatted(server.getName(), server.getDescription());
+
+        String[] preHostCommand = { "stop", "config name %".formatted(server.getName()), "config desc %s".formatted(server.getDescription()) };
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
             var commands = request.getCommands().split("\n");
 
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
-                    .thenMany(Flux.fromArray(commands))//
-                    .concatMap(command -> gateway.getServer().sendCommand(command))//
+                    .then(gateway.getServer().sendCommand(commands))//
                     .then();
         }
 
