@@ -299,11 +299,6 @@ public class ServerService {
 
         for (Container container : containers) {
             try {
-                if (!container.getState().equalsIgnoreCase("running")) {
-                    log.info("Starting container " + container.getId());
-                    dockerClient.startContainerCmd(container.getId()).exec();
-                }
-
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
                 int port = request.getPort();
