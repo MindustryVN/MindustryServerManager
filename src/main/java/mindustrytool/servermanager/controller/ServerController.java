@@ -22,6 +22,7 @@ import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
+import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import reactor.core.publisher.Flux;
@@ -67,6 +68,11 @@ public class ServerController {
     @PostMapping("/servers/{id}/host")
     public Mono<Void> host(@PathVariable("id") UUID serverId, @RequestBody StartServerMessageRequest request) {
         return serverService.host(serverId, request);
+    }
+
+    @PostMapping("/servers/{id}/host-from-server")
+    public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId, @RequestBody HostFromSeverRequest request) {
+        return serverService.hostFromServer(serverId, request);
     }
 
     @PostMapping("/servers/{id}/set-player")
