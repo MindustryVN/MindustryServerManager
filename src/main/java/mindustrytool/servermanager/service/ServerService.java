@@ -157,9 +157,7 @@ public class ServerService {
             log.warn("Container " + request.getId() + " got deleted, creating new");
             servers.remove(request.getId());
             containerId = createNewServerContainer(request);
-        }
-
-        if (containers.isEmpty()) {
+        } else if (containers.isEmpty()) {
             containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
@@ -299,11 +297,6 @@ public class ServerService {
 
         for (Container container : containers) {
             try {
-                if (!container.getState().equalsIgnoreCase("running")) {
-                    log.info("Starting container " + container.getId());
-                    dockerClient.startContainerCmd(container.getId()).exec();
-                }
-
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
                 int port = request.getPort();
