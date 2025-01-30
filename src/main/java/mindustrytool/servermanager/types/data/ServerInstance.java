@@ -137,8 +137,8 @@ public class ServerInstance {
             return UriComponentsBuilder.fromHttpUrl(String.join("/", envConfig.serverConfig().serverUrl(), "api/v3", String.join("/", resource))).build().toUriString();
         }
 
-        public Mono<SetPlayerMessageRequest> setPlayer(PlayerMessageRequest payload) {
-            return WebClient.create(backendUri("servers/players"))//
+        public Mono<SetPlayerMessageRequest> setPlayer(UUID id, PlayerMessageRequest payload) {
+            return WebClient.create(backendUri("servers", id.toString(), "players"))//
                     .post()//
                     .headers(this::setHeaders)//
                     .bodyValue(payload)//
