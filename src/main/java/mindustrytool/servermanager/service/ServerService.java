@@ -262,9 +262,22 @@ public class ServerService {
     public Mono<Void> deleteFile(UUID serverId, String path) {
         var file = new File(Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toString());
 
-        if (file.exists()) {
-            file.delete();
+        if (!file.exists()) {
+            log.info("Delete file: " + path + " is not exists");
+            return Mono.empty();
         }
+
+        if (file.isDirectory()) {
+            var children = file.listFiles();
+            if (children != null) {
+                for (File child : children) {
+                    child.delete();
+                    log.info("Deleted: " + child.getPath());
+                }
+            }
+        }
+        log.info("Deleted: " + file.getPath());
+        file.delete();
 
         return Mono.empty();
     }
@@ -364,7 +377,7 @@ public class ServerService {
         return server.getServer().getDetailStats();
     }
 
-public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
+    public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
         ServerInstance server = servers.get(serverId);
 
         if (server == null) {
