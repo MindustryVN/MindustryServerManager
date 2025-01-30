@@ -157,9 +157,7 @@ public class ServerService {
             log.warn("Container " + request.getId() + " got deleted, creating new");
             servers.remove(request.getId());
             containerId = createNewServerContainer(request);
-        }
-
-        if (containers.isEmpty()) {
+        } else if (containers.isEmpty()) {
             containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
