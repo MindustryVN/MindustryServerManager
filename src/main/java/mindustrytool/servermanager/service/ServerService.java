@@ -137,7 +137,10 @@ public class ServerService {
     }
 
     public Flux<Player> getPlayers(UUID id) {
-        return gatewayService.of(id).getServer().getPlayers();
+        return gatewayService.of(id).getServer()//
+                .getPlayers()//
+                .doOnError(error -> log.error("Failed to get players", error))//
+                .onErrorResume(error -> Flux.empty());
     }
 
     public Mono<ServerDto> initServer(InitServerRequest request) {
@@ -316,7 +319,6 @@ public class ServerService {
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
         return initServer(request.getInit())//
-                .delayElement(Duration.ofSeconds(1))//
                 .then(gatewayService.of(serverId).getServer().isHosting())//
                 .flatMap(isHosting -> isHosting //
                         ? Mono.empty()
