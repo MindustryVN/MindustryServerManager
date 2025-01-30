@@ -295,7 +295,7 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
-        log.info("Found running server: " + String.join("\n", String.join("-", containers.stream().map(c -> c.getNames()[0] + " - " + c.getState()).toList())));
+        log.info("Found running server: " + String.join("-", containers.stream().map(c -> c.getNames()[0] + ":" + c.getState()).toList()));
 
         for (Container container : containers) {
             try {
@@ -306,10 +306,8 @@ public class ServerService {
 
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
+                int port = request.getPort();
 
-                String containerName = container.getNames()[0];
-
-                int port = Integer.parseInt(containerName.substring(containerName.lastIndexOf('-') + 1));
                 ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
 
                 servers.put(request.getId(), server);
