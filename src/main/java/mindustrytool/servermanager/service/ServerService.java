@@ -166,7 +166,7 @@ public class ServerService {
 
             var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
-            if (oldRequest != null && oldRequest.getPort() != request.getPort()) {
+            if (oldRequest != null && (oldRequest.getPort() != request.getPort() || oldRequest.isHub() != request.isHub())) {
                 log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container" + container.getState());
 
                 dockerClient.removeContainerCmd(containerId).exec();
@@ -221,14 +221,14 @@ public class ServerService {
             portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
 
             command.withExposedPorts(tcp, udp, localTcp)//
-                    .withEnv("SERVER_ID=" + serverId, "ENV=DEV")//
+                    .withEnv("SERVER_ID=" + serverId, "IS_HUB=" + request.isHub(), "ENV=DEV")//
                     .withHostConfig(HostConfig.newHostConfig()//
                             .withPortBindings(portBindings)//
                             .withNetworkMode("mindustry-server")//
                             .withBinds(bind));
         } else {
             command.withExposedPorts(tcp, udp)//
-                    .withEnv("SERVER_ID=" + serverId)//
+                    .withEnv("SERVER_ID=" + serverId, "IS_HUB=" + request.isHub())//
                     .withHostConfig(HostConfig.newHostConfig()//
                             .withPortBindings(portBindings)//
                             .withNetworkMode("mindustry-server")//

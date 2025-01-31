@@ -35,6 +35,7 @@ public class InitServerRequest {
     private String hostCommand;
 
     private boolean isAutoTurnOff = false;
+    private boolean isHub = false;
 
     private int port;
 }
