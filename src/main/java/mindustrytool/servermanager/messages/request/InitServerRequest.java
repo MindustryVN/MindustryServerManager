@@ -32,5 +32,8 @@ public class InitServerRequest {
     @Size(max = 256)
     private String hostCommand;
 
+    private Boolean isHub;
+    private Boolean isAutoTurnOff;
+    
     private int port;
 }
