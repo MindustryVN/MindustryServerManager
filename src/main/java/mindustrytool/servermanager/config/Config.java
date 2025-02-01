@@ -6,6 +6,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.codec.ServerCodecConfigurer;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import jakarta.annotation.PostConstruct;
 
 @Configuration
+@EnableScheduling
 public class Config implements WebFluxConfigurer {
 
     public static final String ENV = System.getenv("ENV");
