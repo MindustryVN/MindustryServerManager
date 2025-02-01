@@ -195,6 +195,25 @@ public class ServerService {
     }
 
     private String createNewServerContainer(InitServerRequest request) {
+
+        var containerOnRequestPort = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        for (var container : containerOnRequestPort) {
+            for (var port : container.getPorts()) {
+                if (port.getPublicPort() == request.getPort()) {
+                    log.info("Port " + request.getPort() + " is already used by container: " + container.getId() + " attempt to delete it");
+                    if (container.getState().equalsIgnoreCase("running")) {
+                        dockerClient.stopContainerCmd(container.getId()).exec();
+                    }
+                    dockerClient.removeContainerCmd(container.getId()).exec();
+                    break;
+                }
+            }
+        }
+
         String serverId = request.getId().toString();
         String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
 
