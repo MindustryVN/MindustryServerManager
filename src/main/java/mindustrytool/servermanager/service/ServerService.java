@@ -62,7 +62,7 @@ public class ServerService {
     public long getTotalPlayers() {
         return servers.values()//
                 .stream()//
-                .mapToLong(i -> i.getPlayers().stream().filter(s -> s.getLeaveAt() == null).count())//
+                .mapToLong(i -> i.getPlayers().size())//
                 .sum();
     }
 
