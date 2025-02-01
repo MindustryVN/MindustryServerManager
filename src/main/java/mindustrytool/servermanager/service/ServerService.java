@@ -161,7 +161,7 @@ public class ServerService {
 
                 if (port.getPublicPort() == request.getPort() && !request.getId().equals(oldRequest.getId())) {
                     log.info("Port " + request.getPort() + " is already used by container: " + container.getId() + " attempt to delete it");
-                
+
                     if (container.getState().equalsIgnoreCase("running")) {
                         dockerClient.stopContainerCmd(container.getId()).exec();
                     }
@@ -191,6 +191,10 @@ public class ServerService {
 
             if (oldRequest != null && (oldRequest.getPort() != request.getPort() || oldRequest.isHub() != request.isHub())) {
                 log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container" + container.getState());
+
+                if (container.getState().equalsIgnoreCase("running")) {
+                    dockerClient.stopContainerCmd(containerId).exec();
+                }
 
                 dockerClient.removeContainerCmd(containerId).exec();
                 containerId = createNewServerContainer(request);
