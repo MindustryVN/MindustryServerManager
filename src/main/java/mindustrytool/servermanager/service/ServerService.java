@@ -70,7 +70,7 @@ public class ServerService {
                 .getServer()//
                 .getPlayers()//
                 .collectList()//
-                .map(player -> server.isAutoTurnOff() && player.size() == 0);
+                .map(player -> server.getData().isAutoTurnOff() && player.size() == 0);
     }
 
     private void handleServerShutdown(ServerInstance server) {
@@ -194,7 +194,7 @@ public class ServerService {
 
             var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
-            if (oldRequest != null && (oldRequest.getPort() != request.getPort() || oldRequest.isHub() != request.isHub())) {
+            if (!oldRequest.equals(request)) {
                 log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container");
 
                 if (container.getState().equalsIgnoreCase("running")) {
@@ -213,7 +213,7 @@ public class ServerService {
             }
         }
 
-        server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, request.getPort(), request.isAutoTurnOff(), envConfig);
+        server = new ServerInstance(request.getId(), request, envConfig);
 
         servers.put(request.getId(), server);
 
@@ -332,9 +332,8 @@ public class ServerService {
             try {
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
-                int port = request.getPort();
 
-                ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
+                ServerInstance server = new ServerInstance(request.getId(), request, envConfig);
 
                 servers.put(request.getId(), server);
 
@@ -368,8 +367,8 @@ public class ServerService {
 
         String[] preHostCommand = { //
                 "stop", //
-                "config name %s".formatted(server.getName()), //
-                "config desc %s".formatted(server.getDescription())//
+                "config name %s".formatted(server.getData().getName()), //
+                "config desc %s".formatted(server.getData().getDescription())//
         };
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
