@@ -1,6 +1,5 @@
 package mindustrytool.servermanager.types.data;
 
-import java.time.Instant;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -11,7 +10,5 @@ public class Player {
     private String name;
     private String ip;
     private Team team;
-
-    private Instant leaveAt;
-    private Instant createdAt = Instant.now();
+    private String locale;
 }
