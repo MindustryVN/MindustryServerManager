@@ -80,9 +80,11 @@ public class ServerService {
                 if (server.isKillFlag()) {
                     shutdown(server.getId()).subscribe();
                 } else {
+                    log.info("Server {} has no players, flag to kill.".formatted(server.getId()));
                     server.setKillFlag(true);
                 }
             } else {
+                log.info("Remove flag from server {}", server.getId());
                 server.setKillFlag(false);
             }
         }).subscribe();
@@ -331,6 +333,10 @@ public class ServerService {
             try {
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
+
+                if (request.isAutoTurnOff()) {
+                    continue;
+                }
 
                 ServerInstance server = new ServerInstance(request.getId(), request, envConfig);
 
