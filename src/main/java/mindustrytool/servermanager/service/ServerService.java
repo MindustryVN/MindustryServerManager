@@ -65,24 +65,29 @@ public class ServerService {
                 .sum();
     }
 
-    private boolean shouldShutdownServer(ServerInstance server) {
-        return server.isAutoTurnOff() && server.getPlayers().size() == 0;
+    private Mono<Boolean> shouldShutdownServer(ServerInstance server) {
+        return gatewayService.of(server.getId())//
+                .getServer()//
+                .getPlayers()//
+                .collectList()//
+                .map(player -> server.isAutoTurnOff() && player.size() == 0);
     }
 
     private void handleServerShutdown(ServerInstance server) {
-        var shouldShowdown = shouldShutdownServer(server);
-        if (shouldShowdown) {
-            if (server.isKillFlag()) {
-                shutdown(server.getId()).subscribe();
+        shouldShutdownServer(server).doOnNext(shouldShutdown -> {
+            if (shouldShutdown) {
+                if (server.isKillFlag()) {
+                    shutdown(server.getId()).subscribe();
+                } else {
+                    server.setKillFlag(true);
+                }
             } else {
-                server.setKillFlag(true);
+                server.setKillFlag(false);
             }
-        } else {
-            server.setKillFlag(false);
-        }
+        }).subscribe();
     }
 
-    @Scheduled(fixedDelay = 600000)
+    @Scheduled(fixedDelay = 300000)
     private void shutdownNoPlayerServer() {
         servers.values()//
                 .stream()//
@@ -373,12 +378,23 @@ public class ServerService {
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
                     .then(gateway.getServer().sendCommand(commands))//
+                    .then(gateway.getServer().isHosting())//
+                    .flatMap(isHosting -> isHosting //
+                            ? Mono.empty()
+                            : ApiError.badRequest("Server is not hosting yet"))//
+                    .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
                     .then();
         }
 
         return gateway.getServer()//
                 .sendCommand(preHostCommand)//
-                .then(gateway.getServer().host(request));
+                .then(gateway.getServer().host(request))//
+                .then(gateway.getServer().isHosting())//
+                .flatMap(isHosting -> isHosting //
+                        ? Mono.empty()
+                        : ApiError.badRequest("Server is not hosting yet"))//
+                .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
+                .then();
     }
 
     public Mono<Void> ok(UUID serverId) {
