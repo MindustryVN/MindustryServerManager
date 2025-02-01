@@ -71,7 +71,7 @@ public class ServerService {
                 .getServer()//
                 .getPlayers()//
                 .collectList()//
-                .map(player -> server.getData().isAutoTurnOff() && player.size() == 0);
+                .map(players -> server.getData().isAutoTurnOff() && players.size() == 0);
     }
 
     private void handleServerShutdown(ServerInstance server) {
@@ -91,8 +91,6 @@ public class ServerService {
     @Scheduled(fixedDelay = 300000)
     private void shutdownNoPlayerServer() {
         servers.values()//
-                .stream()//
-                .sorted((o1, o2) -> o1.getInitiatedAt().getNano() - o2.getInitiatedAt().getNano())//
                 .forEach(server -> handleServerShutdown(server));
     }
 
