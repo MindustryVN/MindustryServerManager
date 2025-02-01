@@ -334,6 +334,10 @@ public class ServerService {
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
 
+                if (request.isAutoTurnOff()) {
+                    continue;
+                }
+
                 ServerInstance server = new ServerInstance(request.getId(), request, envConfig);
 
                 servers.put(request.getId(), server);
