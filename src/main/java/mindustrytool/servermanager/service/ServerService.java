@@ -31,6 +31,7 @@ import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
+import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerInstance;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
@@ -349,6 +350,7 @@ public class ServerService {
     }
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
+
         return initServer(request.getInit())//
                 .then(gatewayService.of(serverId).getServer().isHosting())//
                 .flatMap(isHosting -> isHosting //
@@ -377,18 +379,17 @@ public class ServerService {
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
                     .then(gateway.getServer().sendCommand(commands))//
-                    .then(gateway.getServer().isHosting())//
-                    .flatMap(isHosting -> isHosting //
-                            ? Mono.empty()
-                            : ApiError.badRequest("Server is not hosting yet"))//
-                    .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
-                    .then();
+                    .then(waitForHosting(gateway));
         }
 
         return gateway.getServer()//
                 .sendCommand(preHostCommand)//
                 .then(gateway.getServer().host(request))//
-                .then(gateway.getServer().isHosting())//
+                .then(waitForHosting(gateway));
+    }
+
+    private Mono<Void> waitForHosting(GatewayClient gateway) {
+        return gateway.getServer().isHosting()//
                 .flatMap(isHosting -> isHosting //
                         ? Mono.empty()
                         : ApiError.badRequest("Server is not hosting yet"))//
