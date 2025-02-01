@@ -10,18 +10,16 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import mindustrytool.servermanager.EnvConfig;
+import mindustrytool.servermanager.types.request.InitServerRequest;
 
 @Data
 @Accessors(chain = true)
 public class ServerInstance {
     private final UUID id;
-    private final UUID userId;
-    private final String name;
-    private final String description;
-    private final String mode;
-    private final String containerId;
-    private final int port;
-    private final boolean isAutoTurnOff;
+    private final InitServerRequest data;
+
+    @JsonIgnore
+    private final EnvConfig envConfig;
 
     private String status;
 
@@ -30,9 +28,6 @@ public class ServerInstance {
 
     @JsonIgnore
     private final List<Player> players = new ArrayList<>();
-
-    @JsonIgnore
-    private final EnvConfig envConfig;
 
     @JsonIgnore
     private final Instant initiatedAt = Instant.now();

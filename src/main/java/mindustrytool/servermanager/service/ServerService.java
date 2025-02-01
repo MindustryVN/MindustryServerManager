@@ -31,6 +31,7 @@ import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
+import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerInstance;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
@@ -70,7 +71,7 @@ public class ServerService {
                 .getServer()//
                 .getPlayers()//
                 .collectList()//
-                .map(player -> server.isAutoTurnOff() && player.size() == 0);
+                .map(player -> server.getData().isAutoTurnOff() && player.size() == 0);
     }
 
     private void handleServerShutdown(ServerInstance server) {
@@ -194,7 +195,7 @@ public class ServerService {
 
             var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
-            if (oldRequest != null && (oldRequest.getPort() != request.getPort() || oldRequest.isHub() != request.isHub())) {
+            if (!oldRequest.equals(request)) {
                 log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container");
 
                 if (container.getState().equalsIgnoreCase("running")) {
@@ -213,7 +214,7 @@ public class ServerService {
             }
         }
 
-        server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), containerId, request.getPort(), request.isAutoTurnOff(), envConfig);
+        server = new ServerInstance(request.getId(), request, envConfig);
 
         servers.put(request.getId(), server);
 
@@ -332,9 +333,8 @@ public class ServerService {
             try {
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
-                int port = request.getPort();
 
-                ServerInstance server = new ServerInstance(request.getId(), request.getUserId(), request.getName(), request.getDescription(), request.getMode(), container.getId(), port, request.isAutoTurnOff(), envConfig);
+                ServerInstance server = new ServerInstance(request.getId(), request, envConfig);
 
                 servers.put(request.getId(), server);
 
@@ -350,6 +350,7 @@ public class ServerService {
     }
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
+
         return initServer(request.getInit())//
                 .then(gatewayService.of(serverId).getServer().isHosting())//
                 .flatMap(isHosting -> isHosting //
@@ -368,8 +369,8 @@ public class ServerService {
 
         String[] preHostCommand = { //
                 "stop", //
-                "config name %s".formatted(server.getName()), //
-                "config desc %s".formatted(server.getDescription())//
+                "config name %s".formatted(server.getData().getName()), //
+                "config desc %s".formatted(server.getData().getDescription())//
         };
 
         if (request.getCommands() != null && !request.getCommands().isBlank()) {
@@ -378,18 +379,17 @@ public class ServerService {
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
                     .then(gateway.getServer().sendCommand(commands))//
-                    .then(gateway.getServer().isHosting())//
-                    .flatMap(isHosting -> isHosting //
-                            ? Mono.empty()
-                            : ApiError.badRequest("Server is not hosting yet"))//
-                    .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
-                    .then();
+                    .then(waitForHosting(gateway));
         }
 
         return gateway.getServer()//
                 .sendCommand(preHostCommand)//
                 .then(gateway.getServer().host(request))//
-                .then(gateway.getServer().isHosting())//
+                .then(waitForHosting(gateway));
+    }
+
+    private Mono<Void> waitForHosting(GatewayClient gateway) {
+        return gateway.getServer().isHosting()//
                 .flatMap(isHosting -> isHosting //
                         ? Mono.empty()
                         : ApiError.badRequest("Server is not hosting yet"))//
