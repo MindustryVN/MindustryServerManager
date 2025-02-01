@@ -74,11 +74,11 @@ public class ServerService {
                 .map(players -> server.getData().isAutoTurnOff() && players.size() == 0);
     }
 
-    private void handleServerShutdown(ServerInstance server) {
-        shouldShutdownServer(server).doOnNext(shouldShutdown -> {
+    private Mono<Void> handleServerShutdown(ServerInstance server) {
+        return shouldShutdownServer(server).flatMap(shouldShutdown -> {
             if (shouldShutdown) {
                 if (server.isKillFlag()) {
-                    shutdown(server.getId()).subscribe();
+                    return shutdown(server.getId());
                 } else {
                     log.info("Server {} has no players, flag to kill.".formatted(server.getId()));
                     server.setKillFlag(true);
@@ -87,13 +87,15 @@ public class ServerService {
                 log.info("Remove flag from server {}", server.getId());
                 server.setKillFlag(false);
             }
-        }).subscribe();
+            return Mono.empty();
+        });
     }
 
     @Scheduled(fixedDelay = 300000)
     private void shutdownNoPlayerServer() {
-        servers.values()//
-                .forEach(server -> handleServerShutdown(server));
+        Flux.fromIterable(servers.values())//
+                .flatMap(server -> handleServerShutdown(server).doOnError(error -> log.error("Error when shutdown", error)).onErrorResume(ignore -> Mono.empty()))//
+                .subscribe();
     }
 
     @PostConstruct
