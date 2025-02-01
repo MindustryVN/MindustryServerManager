@@ -190,7 +190,7 @@ public class ServerService {
             var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
             if (oldRequest != null && (oldRequest.getPort() != request.getPort() || oldRequest.isHub() != request.isHub())) {
-                log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container" + container.getState());
+                log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container");
 
                 if (container.getState().equalsIgnoreCase("running")) {
                     dockerClient.stopContainerCmd(containerId).exec();
