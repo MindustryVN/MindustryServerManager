@@ -7,6 +7,7 @@ import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.reactive.function.client.WebClientRequestException;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 
@@ -21,6 +22,13 @@ import reactor.core.publisher.Mono;
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(WebClientRequestException.class)
+    Mono<ResponseEntity<ErrorResponse>> handle(ServerWebExchange exchange, WebClientRequestException exception) {
+        var message = exception.getMessage();
+
+        return createResponse(exchange, HttpStatus.BAD_REQUEST, exception, message);
+    }
 
     @ExceptionHandler(WebExchangeBindException.class)
     Mono<ResponseEntity<ErrorResponse>> handle(ServerWebExchange exchange, WebExchangeBindException exception) {
