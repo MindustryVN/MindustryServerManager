@@ -2,6 +2,8 @@ package mindustrytool.servermanager.messages.request;
 
 import java.util.UUID;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -33,7 +35,9 @@ public class InitServerRequest {
     private String hostCommand;
 
     private Boolean isHub;
+
+    @JsonProperty("isAutoTurnOff")
     private Boolean isAutoTurnOff;
-    
+
     private int port;
 }
