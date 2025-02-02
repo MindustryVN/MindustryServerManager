@@ -21,7 +21,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 
 @Component
-@Order(1000)
+@Order(500)
 @Slf4j
 @RequiredArgsConstructor
 public class SecurityFilter implements WebFilter {
