@@ -84,8 +84,10 @@ public class ServerService {
                     server.setKillFlag(true);
                 }
             } else {
-                log.info("Remove flag from server {}", server.getId());
-                server.setKillFlag(false);
+                if (server.isKillFlag()) {
+                    server.setKillFlag(false);
+                    log.info("Remove flag from server {}", server.getId());
+                }
             }
             return Mono.empty();
         });
@@ -198,7 +200,7 @@ public class ServerService {
             var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
 
             if (!oldRequest.equals(request)) {
-                log.info("Found container " + container.getNames()[0] + "with port mismatch, delete container");
+                log.info("Found container " + container.getNames()[0] + "with config mismatch, delete container");
 
                 if (container.getState().equalsIgnoreCase("running")) {
                     dockerClient.stopContainerCmd(containerId).exec();
@@ -220,7 +222,7 @@ public class ServerService {
 
         servers.put(request.getId(), server);
 
-        log.info("Created server: " + request.getName() + " with " + server);
+        log.info("Created server: " + request.getName() + " with " + request);
 
         return gatewayService.of(server.getId())//
                 .getServer()//
