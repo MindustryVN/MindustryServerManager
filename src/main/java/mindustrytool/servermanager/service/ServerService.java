@@ -78,6 +78,7 @@ public class ServerService {
         return shouldShutdownServer(server).flatMap(shouldShutdown -> {
             if (shouldShutdown) {
                 if (server.isKillFlag()) {
+                    log.info("Killing server {} due to no player", server.getId());
                     return shutdown(server.getId());
                 } else {
                     log.info("Server {} has no players, flag to kill.", server.getId());
