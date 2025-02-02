@@ -134,7 +134,7 @@ public class ServerService {
                 .flatMap(server -> gatewayService.of(server.getId())//
                         .getServer()//
                         .getStats()//
-                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats))//
+                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
                         .onErrorResume(ignore -> Mono.just(modelMapper.map(server, ServerDto.class)))//
                 );
     }
