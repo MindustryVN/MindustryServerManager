@@ -74,26 +74,28 @@ public class ServerService {
                 .map(players -> server.getData().isAutoTurnOff() && players.size() == 0);
     }
 
-    private void handleServerShutdown(ServerInstance server) {
-        shouldShutdownServer(server).doOnNext(shouldShutdown -> {
+    private Mono<Void> handleServerShutdown(ServerInstance server) {
+        return shouldShutdownServer(server).flatMap(shouldShutdown -> {
             if (shouldShutdown) {
                 if (server.isKillFlag()) {
-                    shutdown(server.getId()).subscribe();
+                    return shutdown(server.getId());
                 } else {
-                    log.info("Server {} has no players, flag to kill.".formatted(server.getId()));
+                    log.info("Server {} has no players, flag to kill.", server.getId());
                     server.setKillFlag(true);
                 }
             } else {
                 log.info("Remove flag from server {}", server.getId());
                 server.setKillFlag(false);
             }
-        }).subscribe();
+            return Mono.empty();
+        });
     }
 
     @Scheduled(fixedDelay = 300000)
     private void shutdownNoPlayerServer() {
-        servers.values()//
-                .forEach(server -> handleServerShutdown(server));
+        Flux.fromIterable(servers.values())//
+                .flatMap(server -> handleServerShutdown(server).doOnError(error -> log.error("Error when shutdown", error)).onErrorResume(ignore -> Mono.empty()))//
+                .subscribe();
     }
 
     @PostConstruct
@@ -218,7 +220,7 @@ public class ServerService {
 
         servers.put(request.getId(), server);
 
-        log.info("Created server: " + request.getName());
+        log.info("Created server: " + request.getName() + " with " + server);
 
         return gatewayService.of(server.getId())//
                 .getServer()//
