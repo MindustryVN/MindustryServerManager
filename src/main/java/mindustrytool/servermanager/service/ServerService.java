@@ -80,7 +80,7 @@ public class ServerService {
                 if (server.isKillFlag()) {
                     return shutdown(server.getId());
                 } else {
-                    log.info("Server {} has no players, flag to kill.".formatted(server.getId()));
+                    log.info("Server {} has no players, flag to kill.", server.getId());
                     server.setKillFlag(true);
                 }
             } else {
@@ -220,7 +220,7 @@ public class ServerService {
 
         servers.put(request.getId(), server);
 
-        log.info("Created server: " + request.getName());
+        log.info("Created server: " + request.getName() + " with " + server);
 
         return gatewayService.of(server.getId())//
                 .getServer()//
