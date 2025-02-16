@@ -37,8 +37,8 @@ public class InitServerRequest {
     private String hostCommand;
 
     @JsonProperty("isAutoTurnOff")
-    private boolean isAutoTurnOff = true;
-    private boolean isHub = false;
+    private Boolean isAutoTurnOff = true;
+    private Boolean isHub = false;
 
     private int port;
 }
