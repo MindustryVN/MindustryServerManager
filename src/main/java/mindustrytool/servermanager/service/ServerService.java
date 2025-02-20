@@ -97,14 +97,16 @@ public class ServerService {
     @Scheduled(fixedDelay = 300000)
     private void shutdownNoPlayerServer() {
         Flux.fromIterable(servers.values())//
-                .flatMap(server -> handleServerShutdown(server).doOnError(error -> log.error("Error when shutdown", error)).onErrorResume(ignore -> Mono.empty()))//
+                .flatMap(server -> handleServerShutdown(server)
+                        .doOnError(error -> log.error("Error when shutdown", error))
+                        .onErrorResume(ignore -> Mono.empty()))//
                 .subscribe();
     }
 
     @PostConstruct
+    @Scheduled(fixedDelay = 5000)
     private void init() {
         loadRunningServers();
-
     }
 
     public List<Container> findContainerByServerId(UUID serverId) {
@@ -168,10 +170,12 @@ public class ServerService {
 
             for (var port : container.getPorts()) {
 
-                var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
+                var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
+                        InitServerRequest.class);
 
                 if (port.getPublicPort() == request.getPort() && !request.getId().equals(oldRequest.getId())) {
-                    log.info("Port " + request.getPort() + " is already used by container: " + container.getId() + " attempt to delete it");
+                    log.info("Port " + request.getPort() + " is already used by container: " + container.getId()
+                            + " attempt to delete it");
 
                     if (container.getState().equalsIgnoreCase("running")) {
                         dockerClient.stopContainerCmd(container.getId()).exec();
@@ -198,7 +202,8 @@ public class ServerService {
             var container = containers.get(0);
             containerId = container.getId();
 
-            var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName), InitServerRequest.class);
+            var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
+                    InitServerRequest.class);
 
             if (!oldRequest.equals(request)) {
                 log.info("Found container " + container.getNames()[0] + "with config mismatch, delete container");
@@ -234,7 +239,8 @@ public class ServerService {
 
     private String createNewServerContainer(InitServerRequest request) {
         String serverId = request.getId().toString();
-        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath().toString();
+        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath()
+                .toString();
 
         Volume volume = new Volume("/config");
         Bind bind = new Bind(serverPath, volume);
@@ -252,7 +258,8 @@ public class ServerService {
         var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
                 .withName(request.getId().toString())//
                 .withAttachStdout(true)//
-                .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel, request.getId().toString()));
+                .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel,
+                        request.getId().toString()));
 
         if (Config.IS_DEVELOPMENT) {
             ExposedPort localTcp = ExposedPort.tcp(9999);
@@ -305,7 +312,8 @@ public class ServerService {
     }
 
     public Mono<Void> deleteFile(UUID serverId, String path) {
-        var file = new File(Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toString());
+        var file = new File(
+                Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toString());
 
         if (!file.exists()) {
             log.info("Delete file: " + path + " is not exists");
@@ -332,14 +340,15 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
-        log.info("Found running server: " + String.join("-", containers.stream().map(c -> c.getNames()[0] + ":" + c.getState()).toList()));
+        log.info("Found running server: "
+                + String.join("-", containers.stream().map(c -> c.getNames()[0] + ":" + c.getState()).toList()));
 
         for (Container container : containers) {
             try {
                 var labels = container.getLabels();
                 var request = Utils.readJsonAsClass(labels.get(Config.serverLabelName), InitServerRequest.class);
 
-                if (request.isAutoTurnOff()) {
+                if (servers.containsKey(request.getId())) {
                     continue;
                 }
 
