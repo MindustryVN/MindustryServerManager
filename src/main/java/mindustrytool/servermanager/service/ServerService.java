@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -261,24 +262,29 @@ public class ServerService {
                 .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel,
                         request.getId().toString()));
 
+        var env = new ArrayList<String>();
+        var exposedPorts = new ArrayList<ExposedPort>();
+
+        exposedPorts.add(tcp);
+        exposedPorts.add(udp);
+
+        env.addAll(request.getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
+        env.add("IS_HUB=" + request.isHub());
+        env.add("SERVER_ID=" + serverId);
+
         if (Config.IS_DEVELOPMENT) {
+            env.add("ENV=DEV");
             ExposedPort localTcp = ExposedPort.tcp(9999);
             portBindings.bind(localTcp, Ports.Binding.bindPort(9999));
-
-            command.withExposedPorts(tcp, udp, localTcp)//
-                    .withEnv("SERVER_ID=" + serverId, "IS_HUB=" + request.isHub(), "ENV=DEV")//
-                    .withHostConfig(HostConfig.newHostConfig()//
-                            .withPortBindings(portBindings)//
-                            .withNetworkMode("mindustry-server")//
-                            .withBinds(bind));
-        } else {
-            command.withExposedPorts(tcp, udp)//
-                    .withEnv("SERVER_ID=" + serverId, "IS_HUB=" + request.isHub())//
-                    .withHostConfig(HostConfig.newHostConfig()//
-                            .withPortBindings(portBindings)//
-                            .withNetworkMode("mindustry-server")//
-                            .withBinds(bind));
+            exposedPorts.add(localTcp);
         }
+
+        command.withExposedPorts(exposedPorts)//
+                .withEnv(env)
+                .withHostConfig(HostConfig.newHostConfig()//
+                        .withPortBindings(portBindings)//
+                        .withNetworkMode("mindustry-server")//
+                        .withBinds(bind));
 
         var result = command.exec();
 

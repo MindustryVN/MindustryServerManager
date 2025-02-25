@@ -1,5 +1,6 @@
 package mindustrytool.servermanager.types.request;
 
+import java.util.Map;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -42,4 +43,6 @@ public class InitServerRequest {
     private boolean isHub = false;
 
     private int port;
+
+    private Map<String, String> env;
 }
