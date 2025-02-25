@@ -34,7 +34,8 @@ public class InitServerRequest {
     @Size(max = 256)
     private String hostCommand;
 
-    private Boolean isHub;
+    @JsonProperty("isHub")
+    private boolean isHub;
 
     @JsonProperty("isAutoTurnOff")
     private Boolean isAutoTurnOff;
