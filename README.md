@@ -2,18 +2,12 @@
 
 Server manager:
 
-- Private map, plugin (using bearer token)
 - Auto translate chat
-- Server access token, remote control, public id
-- Server cluster image (docker)
-- Mindustry server custom image (docker)
 - Server cluster:
 
   - Server cluster hub
   - Admin managment, ban user, ip ban, user info
   - File managment
-  - Custom notification (email, discord, webhook)
-  - Chat to discord, discord to chat (webhook)
   - Custom command, command auto complete
 
 - Server auto backup (file)
