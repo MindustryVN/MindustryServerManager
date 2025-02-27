@@ -2,6 +2,7 @@ package mindustrytool.servermanager.service;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -38,6 +39,7 @@ import mindustrytool.servermanager.types.data.ServerInstance;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
+import mindustrytool.servermanager.types.response.ServerFileDto;
 import mindustrytool.servermanager.utils.ApiError;
 import mindustrytool.servermanager.utils.Utils;
 import reactor.core.publisher.Flux;
@@ -55,6 +57,8 @@ public class ServerService {
     private final GatewayService gatewayService;
 
     public final ConcurrentHashMap<UUID, ServerInstance> servers = new ConcurrentHashMap<>();
+
+    private final Long MAX_FILE_SIZE = 5000000l;
 
     public ServerInstance getServerById(UUID serverId) {
         return servers.get(serverId);
@@ -294,6 +298,36 @@ public class ServerService {
         dockerClient.startContainerCmd(containerId).exec();
 
         return containerId;
+    }
+
+    public File getFile(UUID serverId, String path) {
+        return Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toFile();
+
+    }
+
+    public Flux<ServerFileDto> getFiles(UUID serverId, String path) {
+        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toFile();
+
+        return Mono.just(folder) //
+                .filter(file -> file.length() < MAX_FILE_SIZE)//
+                .switchIfEmpty(ApiError.badRequest("file-too-big"))//
+                .flatMapMany(file -> {
+                    try {
+                        return file.isDirectory()//
+                                ? Flux.fromArray(file.listFiles())//
+                                        .map(child -> new ServerFileDto()//
+                                                .name(child.getName())//
+                                                .size(child.length())//
+                                                .directory(child.isDirectory()))
+                                : Flux.just(new ServerFileDto()//
+                                        .name(file.getName())//
+                                        .directory(file.isDirectory())//
+                                        .size(file.length())//
+                                        .data(Files.readString(file.toPath())));
+                    } catch (IOException e) {
+                        return Mono.error(e);
+                    }
+                });
     }
 
     public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {

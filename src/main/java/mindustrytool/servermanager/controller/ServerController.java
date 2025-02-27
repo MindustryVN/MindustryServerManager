@@ -1,10 +1,17 @@
 package mindustrytool.servermanager.controller;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.UUID;
 
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -26,6 +33,7 @@ import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
+import mindustrytool.servermanager.types.response.ServerFileDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -56,8 +64,34 @@ public class ServerController {
         return serverService.initServer(request);
     }
 
+    @GetMapping("/servers/{id}/files")
+    Flux<ServerFileDto> getFiles(@PathVariable("id") UUID serverId, @RequestParam("path") String path) {
+        return serverService.getFiles(serverId, URLDecoder.decode(path, StandardCharsets.UTF_8));
+    }
+
+    @GetMapping("/servers/{id}/files/download")
+    public ResponseEntity<Resource> downloadFile(//
+            @PathVariable("id") UUID id, @RequestParam(name = "path", required = true) String path) {
+
+        var file = serverService.getFile(id, path);
+        try {
+            InputStreamResource resource = new InputStreamResource(
+                    new FileInputStream(file));
+
+            return ResponseEntity.ok()//
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            String.format("attachment; filename=%s", Paths.get(path).getFileName()))
+                    .contentLength(file.length())//
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)//
+                    .body(resource);
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException("File not found");
+        }
+    }
+
     @PostMapping(value = "/servers/{id}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    Mono<Void> createFile(@PathVariable("id") UUID serverId, @RequestPart("path") String path, @RequestPart("file") FilePart file) {
+    Mono<Void> createFile(@PathVariable("id") UUID serverId, @RequestPart("path") String path,
+            @RequestPart("file") FilePart file) {
         return serverService.createFile(serverId, file, path);
     }
 
