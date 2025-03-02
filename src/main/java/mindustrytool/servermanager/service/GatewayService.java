@@ -54,7 +54,10 @@ public class GatewayService {
         public class Server {
             @JsonIgnore
             public String serverUri(String... resource) {
-                return URI.create((Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + ":9999/") + String.join("/", resource)).toString();
+                return URI.create(
+                        (Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + ":9999/")
+                                + String.join("/", resource))
+                        .toString();
             }
 
             public Mono<Void> setPlayer(SetPlayerMessageRequest request) {
@@ -102,7 +105,7 @@ public class GatewayService {
                         .timeout(Duration.ofSeconds(5));
             }
 
-            public Mono<Void> sendCommand(String ...command) {
+            public Mono<Void> sendCommand(String... command) {
                 return WebClient.create(serverUri("command"))//
                         .post()//
                         .bodyValue(command)//
@@ -139,7 +142,9 @@ public class GatewayService {
             }
 
             public String backendUri(String... resource) {
-                return UriComponentsBuilder.fromHttpUrl(String.join("/", envConfig.serverConfig().serverUrl(), "api/v3", String.join("/", resource))).build().toUriString();
+                return UriComponentsBuilder.fromHttpUrl(
+                        String.join("/", envConfig.serverConfig().serverUrl(), "api/v3", String.join("/", resource)))
+                        .build().toUriString();
             }
 
             public Mono<SetPlayerMessageRequest> setPlayer(UUID id, PlayerMessageRequest payload) {
@@ -162,7 +167,7 @@ public class GatewayService {
             }
 
             public Mono<String> host(String serverId) {
-                return WebClient.create(backendUri("servers", serverId, "host-from-server"))// a
+                return WebClient.create(backendUri("servers", serverId, "host-from-server"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .retrieve()//
@@ -195,6 +200,15 @@ public class GatewayService {
                         .headers(this::setHeaders)//
                         .retrieve()//
                         .bodyToMono(Integer.class);
+            }
+
+            public Mono<String> translate(String text, String targetLanguage) {
+                return WebClient.create(backendUri("servers", "translate", targetLanguage))//
+                        .post()//
+                        .bodyValue(text)//
+                        .headers(this::setHeaders)//
+                        .retrieve()//
+                        .bodyToMono(String.class);
             }
         }
     }
