@@ -461,11 +461,35 @@ public class ServerService {
     }
 
     public Mono<StatsMessageResponse> stats(UUID serverId) {
-        return gatewayService.of(serverId).getServer().getStats();
+        return gatewayService.of(serverId).getServer()//
+                .getStats()//
+                .onErrorReturn(getStatIfError(serverId));
     }
 
     public Mono<StatsMessageResponse> detailStats(UUID serverId) {
-        return gatewayService.of(serverId).getServer().getDetailStats();
+        return gatewayService.of(serverId).getServer()//
+                .getDetailStats()//
+                .onErrorReturn(getStatIfError(serverId));
+
+    }
+
+    private StatsMessageResponse getStatIfError(UUID serverId) {
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
+                .exec();
+
+        var status = !containers.isEmpty() && containers.get(0).getState().equalsIgnoreCase("running") ? "UP" : "DOWN";
+
+        var response = new StatsMessageResponse()
+                .setRamUsage(0)
+                .setTotalRam(0)
+                .setPlayers(0)
+                .setMapName("")
+                .setMods(new ArrayList<>())
+                .setStatus(status);
+
+        return response;
     }
 
     public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
