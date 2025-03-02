@@ -136,6 +136,25 @@ public class ServerService {
                 .then();
     }
 
+    public Mono<Void> remove(UUID serverId) {
+        servers.remove(serverId);
+
+        var containers = findContainerByServerId(serverId);
+
+        log.info("Found %s container to stop".formatted(containers.size()));
+
+        return Flux.fromIterable(containers)//
+                .doOnNext(container -> {
+                    if (container.getState().equalsIgnoreCase("running")) {
+                        dockerClient.stopContainerCmd(container.getId()).exec();
+                        log.info("Stopped: " + container.getNames()[0]);
+                    }
+                    dockerClient.removeContainerCmd(container.getId()).exec();
+                    log.info("Removed: " + container.getNames()[0]);
+                })//
+                .then();
+    }
+
     public Flux<ServerDto> getServers() {
         return Flux.fromIterable(servers.values())//
                 .flatMap(server -> gatewayService.of(server.getId())//

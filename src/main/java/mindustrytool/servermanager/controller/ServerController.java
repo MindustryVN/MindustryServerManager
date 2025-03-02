@@ -129,6 +129,10 @@ public class ServerController {
     public Mono<Void> shutdown(@PathVariable("id") UUID serverId) {
         return serverService.shutdown(serverId);
     }
+    @GetMapping("/servers/{id}/remove")
+    public Mono<Void> remove(@PathVariable("id") UUID serverId) {
+        return serverService.remove(serverId);
+    }
 
     @GetMapping("/servers/{id}/detail-stats")
     public Mono<StatsMessageResponse> detailStats(@PathVariable("id") UUID serverId) {
