@@ -381,9 +381,6 @@ public class ServerService {
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
-        log.info("Found running server: "
-                + String.join("-", containers.stream().map(c -> c.getNames()[0] + ":" + c.getState()).toList()));
-
         for (Container container : containers) {
             try {
                 var labels = container.getLabels();
