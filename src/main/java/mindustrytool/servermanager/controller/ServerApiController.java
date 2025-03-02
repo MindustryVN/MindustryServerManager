@@ -68,8 +68,9 @@ public class ServerApiController {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().getServers(page, size));
     }
 
-    @GetMapping("translate/{targetLanguage}")
-    public Mono<String> translate(@PathVariable("targetLanguage") String targetLanguage, //
+    @PostMapping("translate/{targetLanguage}")
+    public Mono<String> translate(//
+            @PathVariable("targetLanguage") String targetLanguage, //
             @Validated @RequestBody @Size(min = 1, max = 1024) String text//
     ) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().translate(text, targetLanguage));
