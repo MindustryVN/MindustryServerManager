@@ -288,7 +288,7 @@ public class ServerService {
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
-                        .withMemory(300000000l)
+                        .withMemory(450000000l)
                         .withBinds(bind));
 
         var result = command.exec();
