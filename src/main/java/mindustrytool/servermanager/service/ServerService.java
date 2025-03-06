@@ -76,7 +76,9 @@ public class ServerService {
                 .getServer()//
                 .getPlayers()//
                 .collectList()//
-                .map(players -> server.getData().isAutoTurnOff() && players.size() == 0);
+                .map(players -> server.getData().isAutoTurnOff() && players.size() == 0)//
+                .retry(5)//
+                .onErrorReturn(true);
     }
 
     private Mono<Void> handleServerShutdown(ServerInstance server) {
