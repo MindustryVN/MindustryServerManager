@@ -104,6 +104,7 @@ public class ServerService {
     private void shutdownNoPlayerServer() {
         Flux.fromIterable(servers.values())//
                 .flatMap(server -> handleServerShutdown(server)
+                        .retry(5)//
                         .doOnError(error -> log.error("Error when shutdown", error))
                         .onErrorResume(ignore -> Mono.empty()))//
                 .subscribe();

@@ -45,7 +45,8 @@ public class ServerApiController {
                                 .getServer()//
                                 .getPlayers()//
                                 .collectList())//
-                        .collect(Collectors.summingInt(players -> players.size())));
+                        .collect(Collectors.summingInt(players -> players.size())))//
+                .onErrorReturn(0);
     }
 
     @PostMapping("chat")
