@@ -72,27 +72,48 @@ public class ServerService {
     }
 
     private Mono<Boolean> shouldShutdownServer(ServerInstance server) {
+        var container = findContainerByServerId(server.getId());
+
+        if (container == null) {
+            log.error("Container not found for server {}", server.getId());
+            return Mono.just(false);
+        }
+
+        if (!container.getState().equalsIgnoreCase("running")) {
+            return gatewayService.of(server.getId())//
+                    .getBackend()
+                    .sendConsole("Auto shut down not running server: " + server.getId())//
+                    .thenReturn(true);
+        }
+
         return gatewayService.of(server.getId())//
                 .getServer()//
                 .getPlayers()//
                 .collectList()//
-                .map(players -> server.getData().isAutoTurnOff() && players.size() == 0);
+                .map(players -> server.getData().isAutoTurnOff() && players.size() == 0)//
+                .retry(5)//
+                .onErrorReturn(true);
     }
 
     private Mono<Void> handleServerShutdown(ServerInstance server) {
         return shouldShutdownServer(server).flatMap(shouldShutdown -> {
+            var backend = gatewayService.of(server.getId()).getBackend();
+
             if (shouldShutdown) {
                 if (server.isKillFlag()) {
                     log.info("Killing server {} due to no player", server.getId());
-                    return shutdown(server.getId());
+                    return shutdown(server.getId())//
+                            .then(backend.sendConsole("Auto shut down server: " + server.getId()));
                 } else {
                     log.info("Server {} has no players, flag to kill.", server.getId());
                     server.setKillFlag(true);
+                    return backend.sendConsole("Server " + server.getId() + " has no players, flag to kill");
                 }
             } else {
                 if (server.isKillFlag()) {
                     server.setKillFlag(false);
                     log.info("Remove flag from server {}", server.getId());
+                    return backend.sendConsole("Remove kill flag from server  " + server.getId());
                 }
             }
             return Mono.empty();
@@ -103,6 +124,7 @@ public class ServerService {
     private void shutdownNoPlayerServer() {
         Flux.fromIterable(servers.values())//
                 .flatMap(server -> handleServerShutdown(server)
+                        .retry(5)//
                         .doOnError(error -> log.error("Error when shutdown", error))
                         .onErrorResume(ignore -> Mono.empty()))//
                 .subscribe();
@@ -114,45 +136,55 @@ public class ServerService {
         loadRunningServers();
     }
 
-    public List<Container> findContainerByServerId(UUID serverId) {
-        return dockerClient.listContainersCmd()//
+    public Container findContainerByServerId(UUID serverId) {
+        var containers = dockerClient.listContainersCmd()//
                 .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
                 .withShowAll(true)//
                 .exec();
+
+        if (containers.isEmpty()) {
+            return null;
+        } else if (containers.size() == 1) {
+            return containers.get(0);
+        }
+        log.info("Found " + containers.size() + " containers with id " + serverId + " delete duplicates");
+
+        for (int i = 1; i < containers.size(); i++) {
+            dockerClient.removeContainerCmd(containers.get(i).getId()).exec();
+        }
+
+        return containers.get(0);
     }
 
     public Mono<Void> shutdown(UUID serverId) {
         servers.remove(serverId);
 
-        var containers = findContainerByServerId(serverId);
+        var container = findContainerByServerId(serverId);
 
-        log.info("Found %s container to stop".formatted(containers.size()));
+        log.info("Found %s container to stop".formatted(container.getId()));
 
-        return Flux.fromIterable(containers)//
-                .doOnNext(container -> {
-                    dockerClient.stopContainerCmd(container.getId()).exec();
-                    log.info("Stopped: " + container.getNames()[0]);
-                })//
-                .then();
+        dockerClient.stopContainerCmd(container.getId()).exec();
+        log.info("Stopped: " + container.getNames()[0]);
+
+        return Mono.empty();
+
     }
 
     public Mono<Void> remove(UUID serverId) {
         servers.remove(serverId);
 
-        var containers = findContainerByServerId(serverId);
+        var container = findContainerByServerId(serverId);
 
-        log.info("Found %s container to stop".formatted(containers.size()));
+        log.info("Found %s container to stop".formatted(container.getId()));
 
-        return Flux.fromIterable(containers)//
-                .doOnNext(container -> {
-                    if (container.getState().equalsIgnoreCase("running")) {
-                        dockerClient.stopContainerCmd(container.getId()).exec();
-                        log.info("Stopped: " + container.getNames()[0]);
-                    }
-                    dockerClient.removeContainerCmd(container.getId()).exec();
-                    log.info("Removed: " + container.getNames()[0]);
-                })//
-                .then();
+        if (container.getState().equalsIgnoreCase("running")) {
+            dockerClient.stopContainerCmd(container.getId()).exec();
+            log.info("Stopped: " + container.getNames()[0]);
+        }
+
+        dockerClient.removeContainerCmd(container.getId()).exec();
+        log.info("Removed: " + container.getNames()[0]);
+        return Mono.empty();
     }
 
     public Flux<ServerDto> getServers() {
