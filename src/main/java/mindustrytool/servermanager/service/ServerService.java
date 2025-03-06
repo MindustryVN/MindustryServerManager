@@ -193,7 +193,8 @@ public class ServerService {
                         .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
-                        .onErrorResume(ignore -> Mono.just(modelMapper.map(server, ServerDto.class)))//
+                        .onErrorResume(ignore -> Mono
+                                .just(modelMapper.map(server, ServerDto.class).setUsage(new StatsMessageResponse())))//
                 );
     }
 

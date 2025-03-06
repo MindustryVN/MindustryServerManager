@@ -1,5 +1,6 @@
 package mindustrytool.servermanager.messages.response;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import lombok.Data;
@@ -13,6 +14,6 @@ public class StatsMessageResponse {
     public long players = 0;
     public String mapName = "";
     public byte[] mapData;
-    public List<String> mods;
-    public String status;
+    public List<String> mods = new ArrayList<>();
+    public String status = "DOWN";
 }
