@@ -475,25 +475,32 @@ public class ServerService {
 
         var gateway = gatewayService.of(serverId);
 
-        String[] preHostCommand = { //
-                "stop", //
-                "config name %s".formatted(server.getData().getName()), //
-                "config desc %s".formatted(server.getData().getDescription())//
-        };
+        return gateway.getServer().isHosting().onErrorReturn(false).flatMap(isHosting -> {
 
-        if (request.getCommands() != null && !request.getCommands().isBlank()) {
-            var commands = request.getCommands().split("\n");
+            if (isHosting) {
+                return Mono.empty();
+            }
+
+            String[] preHostCommand = { //
+                    "stop", //
+                    "config name %s".formatted(server.getData().getName()), //
+                    "config desc %s".formatted(server.getData().getDescription())//
+            };
+
+            if (request.getCommands() != null && !request.getCommands().isBlank()) {
+                var commands = request.getCommands().split("\n");
+
+                return gateway.getServer()//
+                        .sendCommand(preHostCommand)//
+                        .then(gateway.getServer().sendCommand(commands))//
+                        .then(waitForHosting(gateway));
+            }
 
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
-                    .then(gateway.getServer().sendCommand(commands))//
+                    .then(gateway.getServer().host(request))//
                     .then(waitForHosting(gateway));
-        }
-
-        return gateway.getServer()//
-                .sendCommand(preHostCommand)//
-                .then(gateway.getServer().host(request))//
-                .then(waitForHosting(gateway));
+        });
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
