@@ -482,7 +482,6 @@ public class ServerService {
             }
 
             String[] preHostCommand = { //
-                    "stop", //
                     "config name %s".formatted(server.getData().getName()), //
                     "config desc %s".formatted(server.getData().getDescription())//
             };
@@ -490,14 +489,16 @@ public class ServerService {
             if (request.getCommands() != null && !request.getCommands().isBlank()) {
                 var commands = request.getCommands().split("\n");
 
-                return gateway.getServer()//
-                        .sendCommand(preHostCommand)//
+                return shutdown(serverId)//
+                        .then(gateway.getServer()//
+                                .sendCommand(preHostCommand))//
                         .then(gateway.getServer().sendCommand(commands))//
                         .then(waitForHosting(gateway));
             }
 
-            return gateway.getServer()//
-                    .sendCommand(preHostCommand)//
+            return shutdown(serverId)//
+                    .then(gateway.getServer()//
+                            .sendCommand(preHostCommand))//
                     .then(gateway.getServer().host(request))//
                     .then(waitForHosting(gateway));
         });
