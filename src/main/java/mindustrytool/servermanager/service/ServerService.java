@@ -82,6 +82,20 @@ public class ServerService {
                 .onErrorReturn(true);
     }
 
+    public Mono<Integer> getTotalPlayers() {
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        return Flux.fromIterable(containers)//
+                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
+                        InitServerRequest.class))
+                .flatMap(server -> gatewayService.of(server.getId()).getBackend().getTotalPlayer())//
+                .collectList()//
+                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
+    }
+
     private Mono<Void> handleServerShutdown(InitServerRequest server) {
         return shouldShutdownServer(server).flatMap(shouldShutdown -> {
             var backend = gatewayService.of(server.getId()).getBackend();
