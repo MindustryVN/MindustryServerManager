@@ -54,7 +54,7 @@ public class ServerService {
     private final ModelMapper modelMapper;
     private final GatewayService gatewayService;
 
-    public final ConcurrentHashMap<UUID, Boolean> servers = new ConcurrentHashMap<>();
+    public final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
@@ -79,28 +79,18 @@ public class ServerService {
                 .collectList()//
                 .map(players -> server.isAutoTurnOff() && players.size() == 0)//
                 .retry(5)//
+                .doOnError(error -> gatewayService.of(server.getId())//
+                        .getBackend()
+                        .sendConsole("Server not response, auto shutdown: " + server
+                                .getId()))
                 .onErrorReturn(true);
-    }
-
-    public Mono<Integer> getTotalPlayers() {
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(List.of(Config.serverLabelName))//
-                .exec();
-
-        return Flux.fromIterable(containers)//
-                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                        InitServerRequest.class))
-                .flatMap(server -> gatewayService.of(server.getId()).getBackend().getTotalPlayer())//
-                .collectList()//
-                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
     }
 
     private Mono<Void> handleServerShutdown(InitServerRequest server) {
         return shouldShutdownServer(server).flatMap(shouldShutdown -> {
             var backend = gatewayService.of(server.getId()).getBackend();
 
-            var killFlag = servers.getOrDefault(server.getId(), false);
+            var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
 
             if (shouldShutdown) {
                 if (killFlag) {
@@ -109,12 +99,12 @@ public class ServerService {
                             .then(backend.sendConsole("Auto shut down server: " + server.getId()));
                 } else {
                     log.info("Server {} has no players, flag to kill.", server.getId());
-                    servers.put(server.getId(), true);
+                    serverKillFlags.put(server.getId(), true);
                     return backend.sendConsole("Server " + server.getId() + " has no players, flag to kill");
                 }
             } else {
                 if (killFlag) {
-                    servers.put(server.getId(), false);
+                    serverKillFlags.put(server.getId(), false);
                     log.info("Remove flag from server {}", server.getId());
                     return backend.sendConsole("Remove kill flag from server  " + server.getId());
                 }
@@ -140,6 +130,20 @@ public class ServerService {
                 .subscribe();
     }
 
+    public Mono<Integer> getTotalPlayers() {
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        return Flux.fromIterable(containers)//
+                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
+                        InitServerRequest.class))
+                .flatMap(server -> gatewayService.of(server.getId()).getBackend().getTotalPlayer())//
+                .collectList()//
+                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
+    }
+
     public Container findContainerByServerId(UUID serverId) {
         var containers = dockerClient.listContainersCmd()//
                 .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
@@ -161,8 +165,6 @@ public class ServerService {
     }
 
     public Mono<Void> shutdown(UUID serverId) {
-        servers.remove(serverId);
-
         var container = findContainerByServerId(serverId);
 
         log.info("Found %s container to stop".formatted(container.getId()));
@@ -175,8 +177,6 @@ public class ServerService {
     }
 
     public Mono<Void> remove(UUID serverId) {
-        servers.remove(serverId);
-
         var container = findContainerByServerId(serverId);
 
         log.info("Found %s container to stop".formatted(container.getId()));
@@ -210,7 +210,7 @@ public class ServerService {
     }
 
     public Mono<ServerDto> getServer(UUID id) {
-        return Mono.justOrEmpty(servers.get(id))//
+        return Mono.justOrEmpty(findContainerByServerId(id))//
                 .flatMap(server -> gatewayService.of(id)//
                         .getServer()//
                         .getStats()//
@@ -224,7 +224,7 @@ public class ServerService {
                 .onErrorResume(error -> Flux.empty());
     }
 
-    public Mono<ServerDto> initServer(InitServerRequest request) {
+    public Mono<Void> initServer(InitServerRequest request) {
         if (request.getPort() <= 0) {
             throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
         }
@@ -255,7 +255,6 @@ public class ServerService {
         }
 
         String containerId;
-        var server = servers.get(request.getId());
 
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
@@ -264,7 +263,6 @@ public class ServerService {
 
         if (containers.isEmpty()) {
             log.warn("Container " + request.getId() + " got deleted, creating new");
-            servers.remove(request.getId());
             containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
@@ -298,7 +296,7 @@ public class ServerService {
                 .getServer()//
                 .ok()//
                 .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
-                .thenReturn(modelMapper.map(server, ServerDto.class));
+                .then();
     }
 
     private String createNewServerContainer(InitServerRequest request) {
