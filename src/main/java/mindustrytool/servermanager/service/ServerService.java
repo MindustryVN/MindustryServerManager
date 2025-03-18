@@ -116,7 +116,6 @@ public class ServerService {
     @Scheduled(fixedDelay = 300000)
     private void shutdownNoPlayerServer() {
         var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
