@@ -60,7 +60,7 @@ public class ServerController {
     }
 
     @PostMapping("/servers/{id}/init")
-    Mono<ServerDto> initServer(@Validated @RequestBody InitServerRequest request) {
+    Mono<Void> initServer(@Validated @RequestBody InitServerRequest request) {
         return serverService.initServer(request);
     }
 
