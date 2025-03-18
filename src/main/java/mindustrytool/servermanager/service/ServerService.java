@@ -79,21 +79,11 @@ public class ServerService {
                 .collectList()//
                 .map(players -> server.isAutoTurnOff() && players.size() == 0)//
                 .retry(5)//
+                .doOnError(error -> gatewayService.of(server.getId())//
+                        .getBackend()
+                        .sendConsole("Server not response, auto shutdown: " + server
+                                .getId()))
                 .onErrorReturn(true);
-    }
-
-    public Mono<Integer> getTotalPlayers() {
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(List.of(Config.serverLabelName))//
-                .exec();
-
-        return Flux.fromIterable(containers)//
-                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                        InitServerRequest.class))
-                .flatMap(server -> gatewayService.of(server.getId()).getBackend().getTotalPlayer())//
-                .collectList()//
-                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
     }
 
     private Mono<Void> handleServerShutdown(InitServerRequest server) {
@@ -138,6 +128,20 @@ public class ServerService {
                         .doOnError(error -> log.error("Error when shutdown", error))
                         .onErrorResume(ignore -> Mono.empty()))//
                 .subscribe();
+    }
+
+    public Mono<Integer> getTotalPlayers() {
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        return Flux.fromIterable(containers)//
+                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
+                        InitServerRequest.class))
+                .flatMap(server -> gatewayService.of(server.getId()).getBackend().getTotalPlayer())//
+                .collectList()//
+                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
     }
 
     public Container findContainerByServerId(UUID serverId) {
