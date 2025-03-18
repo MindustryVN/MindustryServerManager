@@ -1,7 +1,5 @@
 package mindustrytool.servermanager.controller;
 
-import java.util.stream.Collectors;
-
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,9 +16,7 @@ import mindustrytool.servermanager.filter.ServerFilter;
 import mindustrytool.servermanager.messages.request.PlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
-import mindustrytool.servermanager.service.GatewayService;
 import mindustrytool.servermanager.service.ServerService;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -29,7 +25,6 @@ import reactor.core.publisher.Mono;
 public class ServerApiController {
 
     private final ServerService serverService;
-    private final GatewayService gatewayService;
 
     @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
@@ -38,14 +33,7 @@ public class ServerApiController {
 
     @GetMapping("total-player")
     public Mono<Integer> getTotalPlayer() {
-        return ServerFilter.getContext()//
-                .flatMap(server -> Flux.fromIterable(serverService.servers.values())//
-                        .map(s -> s.getId())//
-                        .flatMap(id -> gatewayService.of(id)//
-                                .getServer()//
-                                .getPlayers()//
-                                .collectList())//
-                        .collect(Collectors.summingInt(players -> players.size())))//
+        return serverService.getTotalPlayers()//
                 .onErrorReturn(0);
     }
 
