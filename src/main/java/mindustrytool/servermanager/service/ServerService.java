@@ -124,7 +124,6 @@ public class ServerService {
                 .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
                         InitServerRequest.class))
                 .flatMap(server -> handleServerShutdown(server)
-                        .retry(5)//
                         .doOnError(error -> log.error("Error when shutdown", error))
                         .onErrorResume(ignore -> Mono.empty()))//
                 .subscribe();
@@ -471,16 +470,14 @@ public class ServerService {
             if (request.getCommands() != null && !request.getCommands().isBlank()) {
                 var commands = request.getCommands().split("\n");
 
-                return shutdown(serverId)//
-                        .then(gateway.getServer()//
-                                .sendCommand(preHostCommand))//
+                return gateway.getServer()//
+                        .sendCommand(preHostCommand)//
                         .then(gateway.getServer().sendCommand(commands))//
                         .then(waitForHosting(gateway));
             }
 
-            return shutdown(serverId)//
-                    .then(gateway.getServer()//
-                            .sendCommand(preHostCommand))//
+            return gateway.getServer()//
+                    .sendCommand(preHostCommand)//
                     .then(gateway.getServer().host(request))//
                     .then(waitForHosting(gateway));
         });
