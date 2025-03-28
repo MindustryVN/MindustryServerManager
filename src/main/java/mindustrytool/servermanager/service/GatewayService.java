@@ -83,8 +83,8 @@ public class GatewayService {
                         .get()//
                         .retrieve()//
                         .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(5))//
-                        .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
+                        .timeout(Duration.ofMillis(100))//
+                        .retryWhen(Retry.fixedDelay(100, Duration.ofMillis(500)))//
                         .then();//
 
             }
