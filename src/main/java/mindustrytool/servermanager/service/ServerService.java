@@ -24,6 +24,7 @@ import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.Volume;
+import com.github.dockerjava.core.InvocationBuilder.AsyncResultCallback;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -209,10 +210,25 @@ public class ServerService {
 
     public Mono<ServerDto> getServer(UUID id) {
         return Mono.justOrEmpty(findContainerByServerId(id))//
-                .flatMap(server -> gatewayService.of(id)//
-                        .getServer()//
-                        .getStats()//
-                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats)));
+                .flatMap(server -> {
+                    var containerStats = dockerClient.statsCmd(server.getId())
+                            .withNoStream(true)
+                            .exec(new AsyncResultCallback<>())//
+                            .awaitResult();
+
+                    return gatewayService.of(id)//
+                            .getServer()//
+                            .getStats()//
+                            .map(stats -> {
+                                var dto = modelMapper.map(server, ServerDto.class);
+                                if (containerStats != null) {
+                                    stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage());
+                                    stats.setTotalRam(containerStats.getMemoryStats().getLimit());
+                                    stats.setRamUsage(containerStats.getMemoryStats().getUsage());
+                                }
+                                return dto.setUsage(stats);
+                            });
+                });
     }
 
     public Flux<Player> getPlayers(UUID id) {
