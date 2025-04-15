@@ -2,6 +2,7 @@ package mindustrytool.servermanager.utils;
 
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
@@ -12,6 +13,7 @@ import org.springframework.http.codec.multipart.FilePart;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 
@@ -61,4 +63,21 @@ public class Utils {
             throw new RuntimeException("Can not parse to json: " + e.getMessage(), e);
         }
     }
+
+    public static JsonNode readFile(File file) {
+        try {
+            return objectMapper.readTree(file);
+        } catch (IOException e) {
+            throw new RuntimeException("Can not parse to json: " + e.getMessage(), e);
+        }
+    }
+
+    public static JsonNode readString(String json) {
+        try {
+            return objectMapper.readTree(json);
+        } catch (IOException e) {
+            throw new RuntimeException("Can not parse to json: " + e.getMessage(), e);
+        }
+    }
+
 }

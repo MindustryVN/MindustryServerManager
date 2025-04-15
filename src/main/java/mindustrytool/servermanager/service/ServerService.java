@@ -17,6 +17,8 @@ import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
@@ -543,5 +545,63 @@ public class ServerService {
 
     public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
         return gatewayService.of(serverId).getServer().setPlayer(payload);
+    }
+
+    public Mono<JsonNode> setConfig(UUID serverId, String key, String value) {
+        var folderPath = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "config.json");
+        File file = new File(folderPath.toUri());
+
+        if (!file.exists()) {
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                return Mono.error(e);
+            }
+        }
+
+        if (file.isDirectory()) {
+            deleteFileRecursive(file);
+
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                return Mono.error(e);
+            }
+        }
+
+        var config = Utils.readFile(file);
+        var original = config;
+
+        var keys = key.split("\\.");
+
+        for (int i = 0; i < keys.length - 1; i++) {
+            var k = keys[i];
+            if (config.has(k)) {
+                config = config.get(k);
+            } else {
+                config = ((ObjectNode) config).set(k, Utils.readString("{}"));
+                config = config.get(k);
+            }
+        }
+        ((ObjectNode) config).set(keys[keys.length - 1], Utils.readString(value));
+
+        try {
+            Files.writeString(file.toPath(), Utils.toJsonString(original));
+        } catch (IOException e) {
+            return Mono.error(e);
+        }
+
+        return Mono.just(original);
+    }
+
+    private void deleteFileRecursive(File file) {
+        if (!file.exists())
+            return;
+
+        if (file.isDirectory()) {
+            deleteFileRecursive(file);
+        }
+
+        file.delete();
     }
 }
