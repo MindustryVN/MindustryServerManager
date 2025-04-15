@@ -2,6 +2,7 @@ package mindustrytool.servermanager.service;
 
 import java.net.URI;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
@@ -22,6 +23,7 @@ import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.types.data.Player;
+import mindustrytool.servermanager.types.request.BuildLog;
 import mindustrytool.servermanager.types.response.ApiServerDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -181,6 +183,16 @@ public class GatewayService {
                         .bodyValue(chat)//
                         .retrieve()//
                         .bodyToMono(String.class)//
+                        .then();
+            }
+
+            public Mono<Void> sendBuildLog(UUID serverId, ArrayList<BuildLog> logs) {
+                return WebClient.create(backendUri("servers", serverId.toString(), "build-log"))//
+                        .post()//
+                        .headers(this::setHeaders)//
+                        .bodyValue(logs)//
+                        .retrieve()//
+                        .bodyToMono(Void.class)//
                         .then();
             }
 

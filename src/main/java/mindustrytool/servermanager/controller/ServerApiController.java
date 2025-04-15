@@ -1,5 +1,7 @@
 package mindustrytool.servermanager.controller;
 
+import java.util.ArrayList;
+
 import org.springframework.http.MediaType;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,7 @@ import mindustrytool.servermanager.messages.request.PlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
+import mindustrytool.servermanager.types.request.BuildLog;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -29,6 +32,11 @@ public class ServerApiController {
     @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(server.getId(), payload));
+    }
+
+    @PostMapping(value = "build-log", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<Void> logBuild(@RequestBody ArrayList<BuildLog> payload) {
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().sendBuildLog(server.getId(), payload));
     }
 
     @GetMapping("total-player")
