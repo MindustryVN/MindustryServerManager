@@ -25,6 +25,7 @@ import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
+import com.github.dockerjava.api.model.RestartPolicy;
 import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.InvocationBuilder.AsyncResultCallback;
 
@@ -360,6 +361,9 @@ public class ServerService {
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
                         .withMemory(419430400l)
+                        .withRestartPolicy(request.isAutoTurnOff()//
+                                ? RestartPolicy.noRestart()
+                                : RestartPolicy.unlessStoppedRestart())
                         .withBinds(bind));
 
         var result = command.exec();
