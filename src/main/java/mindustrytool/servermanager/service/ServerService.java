@@ -364,9 +364,10 @@ public class ServerService {
                                 .withRetries(5)
                                 .withTimeout(1000L)
                                 .withTest(List.of(
-                                        "CMD-SHELL",
-                                        "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" + serverId.toString()
-                                                + ":9999/ok)\" == \"200\" ]] || exit 1")))
+                                    "CMD-SHELL",
+                                    "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" +serverId.toString() +":9999/ok)\" == \"200\" ]] || exit 1"
+                                ))
+                )
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
