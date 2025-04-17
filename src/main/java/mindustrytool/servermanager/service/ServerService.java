@@ -23,6 +23,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.HealthCheck;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.RestartPolicy;
@@ -357,6 +358,15 @@ public class ServerService {
 
         command.withExposedPorts(exposedPorts)//
                 .withEnv(env)
+                .withHealthcheck(
+                        new HealthCheck()//
+                                .withInterval(10000L)//
+                                .withRetries(5)
+                                .withTimeout(1000L)
+                                .withTest(List.of(
+                                        "CMD-SHELL",
+                                        "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" + serverId.toString()
+                                                + ":9999/ok)\" == \"200\" ]] || exit 1")))
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
@@ -364,6 +374,7 @@ public class ServerService {
                         .withRestartPolicy(request.isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.unlessStoppedRestart())
+
                         .withBinds(bind));
 
         var result = command.exec();
