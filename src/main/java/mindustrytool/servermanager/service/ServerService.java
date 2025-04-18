@@ -360,9 +360,9 @@ public class ServerService {
                 .withEnv(env)
                 .withHealthcheck(
                         new HealthCheck()//
-                                .withInterval(10000L)//
+                                .withInterval(10000000L)//
                                 .withRetries(5)
-                                .withTimeout(1000L)
+                                .withTimeout(1000000L)
                                 .withTest(List.of(
                                     "CMD-SHELL",
                                     "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" +serverId.toString() +":9999/ok)\" == \"200\" ]] || exit 1"
