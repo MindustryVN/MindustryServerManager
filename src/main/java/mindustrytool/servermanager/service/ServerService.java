@@ -119,17 +119,27 @@ public class ServerService {
     }
 
     @Scheduled(fixedDelay = 300000)
-    private void shutdownNoPlayerServer() {
+    private void cron() {
         var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
         Flux.fromIterable(containers)//
-                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                        InitServerRequest.class))
-                .flatMap(server -> handleServerShutdown(server)
-                        .doOnError(error -> log.error("Error when shutdown", error))
-                        .onErrorResume(ignore -> Mono.empty()))//
+                .flatMap(container -> {
+                    var server = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
+                            InitServerRequest.class);
+
+                    var isRunning = container.getState().equalsIgnoreCase("running");
+
+                    if (isRunning) {
+                        return handleServerShutdown(server)
+                                .doOnError(error -> log.error("Error when shutdown", error))
+                                .onErrorResume(ignore -> Mono.empty());
+                    }
+
+                    return Mono.empty();
+                })//
                 .subscribe();
     }
 
@@ -364,10 +374,9 @@ public class ServerService {
                                 .withRetries(5)
                                 .withTimeout(1000000L)
                                 .withTest(List.of(
-                                    "CMD-SHELL",
-                                    "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" +serverId.toString() +":9999/ok)\" == \"200\" ]] || exit 1"
-                                ))
-                )
+                                        "CMD-SHELL",
+                                        "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" + serverId.toString()
+                                                + ":9999/ok)\" == \"200\" ]] || exit 1")))
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
