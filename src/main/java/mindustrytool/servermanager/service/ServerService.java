@@ -223,25 +223,28 @@ public class ServerService {
     }
 
     public Mono<ServerDto> getServer(UUID id) {
-        return Mono.justOrEmpty(findContainerByServerId(id))//
-                .flatMap(server -> {
-                    var containerStats = dockerClient.statsCmd(server.getId())
-                            .withNoStream(true)
-                            .exec(new AsyncResultCallback<>())//
-                            .awaitResult();
+        var container = findContainerByServerId(id);
 
-                    return gatewayService.of(id)//
-                            .getServer()//
-                            .getStats()//
-                            .map(stats -> {
-                                var dto = modelMapper.map(server, ServerDto.class);
-                                if (containerStats != null) {
-                                    stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage());
-                                    stats.setTotalRam(containerStats.getMemoryStats().getLimit());
-                                    stats.setRamUsage(containerStats.getMemoryStats().getUsage());
-                                }
-                                return dto.setUsage(stats);
-                            });
+        if (container == null) {
+            return Mono.just(new ServerDto().setStatus("DELETED"));
+        }
+
+        var containerStats = dockerClient.statsCmd(container.getId())
+                .withNoStream(true)
+                .exec(new AsyncResultCallback<>())//
+                .awaitResult();
+
+        return gatewayService.of(id)//
+                .getServer()//
+                .getStats()//
+                .map(stats -> {
+                    var dto = modelMapper.map(container, ServerDto.class);
+                    if (containerStats != null) {
+                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage());
+                        stats.setTotalRam(containerStats.getMemoryStats().getLimit());
+                        stats.setRamUsage(containerStats.getMemoryStats().getUsage());
+                    }
+                    return dto.setUsage(stats);
                 });
     }
 
