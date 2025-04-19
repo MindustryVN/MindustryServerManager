@@ -33,17 +33,19 @@ public class InitServerRequest {
     @NotNull
     @Size(max = 256)
     private String mode;
-
+    
     @Size(max = 256)
     private String hostCommand;
-
+    
     @JsonProperty("isAutoTurnOff")
     private boolean isAutoTurnOff = true;
    
     @JsonProperty("isHub")
     private boolean isHub = false;
-
+    
     private int port;
-
+    
     private Map<String, String> env;
+    
+    private String image;
 }

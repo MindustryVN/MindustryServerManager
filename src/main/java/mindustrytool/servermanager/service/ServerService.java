@@ -346,7 +346,9 @@ public class ServerService {
 
         log.info("Create new container on port " + request.getPort());
 
-        var command = dockerClient.createContainerCmd(envConfig.docker().mindustryServerImage())//
+        var image = request.getImage() == null || request.getImage().isEmpty() ? envConfig.docker().mindustryServerImage() : request.getImage();
+
+        var command = dockerClient.createContainerCmd(image)//
                 .withName(request.getId().toString())//
                 .withAttachStdout(true)//
                 .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel,
