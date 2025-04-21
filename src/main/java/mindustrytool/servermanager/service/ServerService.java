@@ -346,7 +346,9 @@ public class ServerService {
 
         log.info("Create new container on port " + request.getPort());
 
-        var image = request.getImage() == null || request.getImage().isEmpty() ? envConfig.docker().mindustryServerImage() : request.getImage();
+        var image = request.getImage() == null || request.getImage().isEmpty()
+                ? envConfig.docker().mindustryServerImage()
+                : request.getImage();
 
         var command = dockerClient.createContainerCmd(image)//
                 .withName(request.getId().toString())//
@@ -380,8 +382,8 @@ public class ServerService {
                                 .withTimeout(1000000L)
                                 .withTest(List.of(
                                         "CMD-SHELL",
-                                        "[[ \"$(curl -s -o /dev/null -w '%{http_code}' http://" + serverId.toString()
-                                                + ":9999/ok)\" == \"200\" ]] || exit 1")))
+                                        "wget --spider -q http://" + serverId.toString()
+                                                + ":9999/ok || exit 1")))
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
