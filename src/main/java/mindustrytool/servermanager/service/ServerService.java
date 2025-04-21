@@ -263,12 +263,19 @@ public class ServerService {
 
     private Optional<ServerContainerMetadata> readMetadataFromContainer(Container container) {
         try {
-            var metdata = container.getLabels().get(Config.serverLabelName);
-            if (metdata == null) {
+            var label = container.getLabels().get(Config.serverLabelName);
+
+            if (label == null) {
                 return Optional.empty();
             }
 
-            return Optional.of(Utils.readJsonAsClass(metdata, ServerContainerMetadata.class));
+            var metadata = Utils.readJsonAsClass(label, ServerContainerMetadata.class);
+
+            if (metadata.getInit() == null || metadata.getHost() == null) {
+                return Optional.empty();
+            }
+
+            return Optional.of(metadata);
         } catch (Exception _e) {
             return Optional.empty();
         }
