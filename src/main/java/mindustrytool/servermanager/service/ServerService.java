@@ -141,7 +141,9 @@ public class ServerService {
                                                 .getId()))
                                 .onErrorComplete();
                     } else {
-                        dockerClient.removeContainerCmd(container.getId()).exec();
+                        if (!isSameManagerHash || !isSameServerHash) {
+                            dockerClient.removeContainerCmd(container.getId()).exec();
+                        }
                         return Mono.empty();
                     }
                 })//
