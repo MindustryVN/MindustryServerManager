@@ -78,6 +78,9 @@ public class ServerService {
                     var optional = readMetadataFromContainer(container);
 
                     if (optional.isEmpty()) {
+                        if (container.getState().equalsIgnoreCase("running")) {
+                            dockerClient.stopContainerCmd(container.getId()).exec();
+                        }
                         dockerClient.removeContainerCmd(container.getId()).exec();
                         log.error("Container " + container.getId() + " has no metadata");
                         return Mono.empty();
@@ -103,6 +106,9 @@ public class ServerService {
                                     boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
 
                                     if (players.isEmpty() && (!isSameManagerHash || !isSameServerHash)) {
+                                        if (container.getState().equalsIgnoreCase("running")) {
+                                            dockerClient.stopContainerCmd(container.getId()).exec();
+                                        }
                                         dockerClient.removeContainerCmd(container.getId()).exec();
 
                                         return hostFromServer(metadata.getInit().getId(),
@@ -142,6 +148,9 @@ public class ServerService {
                                 .onErrorComplete();
                     } else {
                         if (!isSameManagerHash || !isSameServerHash) {
+                            if (container.getState().equalsIgnoreCase("running")) {
+                                dockerClient.stopContainerCmd(container.getId()).exec();
+                            }
                             dockerClient.removeContainerCmd(container.getId()).exec();
                         }
                         return Mono.empty();
@@ -340,6 +349,9 @@ public class ServerService {
 
             if (optional.isEmpty()) {
                 log.error("Container " + container.getId() + " has no metadata");
+                if (container.getState().equalsIgnoreCase("running")) {
+                    dockerClient.stopContainerCmd(container.getId()).exec();
+                }
                 dockerClient.removeContainerCmd(container.getId()).exec();
                 containerId = createNewServerContainer(request);
             }
