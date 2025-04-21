@@ -254,11 +254,13 @@ public class ServerService {
                 .exec(new AsyncResultCallback<>())//
                 .awaitResult();
 
+        var metadata = readMetadataFromContainer(container).orElseThrow();;
+
         return gatewayService.of(id)//
                 .getServer()//
                 .getStats()//
-                .map(stats -> {
-                    var dto = modelMapper.map(container, ServerDto.class);
+                .map(stats ->   {
+                    var dto = modelMapper.map(metadata.getInit(), ServerDto.class);
                     if (containerStats != null) {
                         stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage());
                         stats.setTotalRam(containerStats.getMemoryStats().getLimit());
