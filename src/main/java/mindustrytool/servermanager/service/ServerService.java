@@ -441,10 +441,10 @@ public class ServerService {
 
         var command = dockerClient.createContainerCmd(image)//
                 .withName(request.getInit().getId().toString())//
-                .withAttachStdout(true)//
                 .withLabels(Map.of(//
                         Config.serverLabelName, Utils.toJsonString(currentMetadata),
-                        Config.serverIdLabel, request.getInit().getId().toString()));
+                        Config.serverIdLabel, request.getInit().getId().toString()//
+                ));
 
         var env = new ArrayList<String>();
         var exposedPorts = new ArrayList<ExposedPort>();
