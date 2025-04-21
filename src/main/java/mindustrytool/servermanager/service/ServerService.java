@@ -87,6 +87,12 @@ public class ServerService {
 
                     var isRunning = container.getState().equalsIgnoreCase("running");
 
+                    var self = dockerService.getSelf();
+                    var serverImage = dockerClient.inspectImageCmd(server.getImage()).exec();
+
+                    var isSameServerHash = metadata.getServerImageHash().equals(serverImage.getId());
+                    var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
+
                     if (isRunning) {
                         return gatewayService.of(server.getId())//
                                 .getServer()//
@@ -94,12 +100,6 @@ public class ServerService {
                                 .collectList()//
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
-
-                                    var self = dockerService.getSelf();
-                                    var serverImage = dockerClient.inspectImageCmd(server.getImage()).exec();
-
-                                    var isSameServerHash = metadata.getServerImageHash().equals(serverImage.getId());
-                                    var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
 
                                     if (players.isEmpty() && (!isSameManagerHash || !isSameServerHash)) {
                                         dockerClient.removeContainerCmd(container.getId()).exec();
@@ -139,9 +139,10 @@ public class ServerService {
                                         .sendConsole("Server not response, auto shutdown: " + server
                                                 .getId()))
                                 .onErrorComplete();
+                    } else {
+                        dockerClient.removeContainerCmd(container.getId()).exec();
+                        return Mono.empty();
                     }
-
-                    return Mono.empty();
                 })//
                 .subscribe();
     }
