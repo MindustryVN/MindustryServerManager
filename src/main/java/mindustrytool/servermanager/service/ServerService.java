@@ -254,12 +254,13 @@ public class ServerService {
                 .exec(new AsyncResultCallback<>())//
                 .awaitResult();
 
-        var metadata = readMetadataFromContainer(container).orElseThrow();;
+        var metadata = readMetadataFromContainer(container).orElseThrow();
+        ;
 
         return gatewayService.of(id)//
                 .getServer()//
                 .getStats()//
-                .map(stats ->   {
+                .map(stats -> {
                     var dto = modelMapper.map(metadata.getInit(), ServerDto.class);
                     if (containerStats != null) {
                         stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage());
@@ -298,6 +299,7 @@ public class ServerService {
     }
 
     public Mono<Void> initServer(HostFromSeverRequest request) {
+        log.info("Init server: " + request.getInit().getId());
 
         if (request.getInit().getPort() <= 0) {
             throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
