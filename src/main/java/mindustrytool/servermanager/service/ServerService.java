@@ -318,6 +318,7 @@ public class ServerService {
 
                 if (optional.isEmpty()) {
                     log.error("Container " + container.getId() + " has no metadata");
+                    dockerClient.removeConfigCmd(container.getId()).exec();
                     continue;
                 }
 
