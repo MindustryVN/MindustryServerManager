@@ -8,4 +8,5 @@ import lombok.experimental.Accessors;
 public class StartServerMessageRequest {
     String commands;
     String mode;
+    String mapName;
 }

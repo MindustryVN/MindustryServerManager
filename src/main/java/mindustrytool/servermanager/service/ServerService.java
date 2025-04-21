@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -34,11 +35,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
+import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
+import mindustrytool.servermanager.types.data.ServerContainerMetadata;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
@@ -58,65 +61,11 @@ public class ServerService {
     private final EnvConfig envConfig;
     private final ModelMapper modelMapper;
     private final GatewayService gatewayService;
+    private final DockerService dockerService;
 
     public final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
-
-    private Mono<Boolean> shouldShutdownServer(InitServerRequest server) {
-        var container = findContainerByServerId(server.getId());
-
-        if (container == null) {
-            log.error("Container not found for server {}", server.getId());
-            return Mono.just(false);
-        }
-
-        if (!container.getState().equalsIgnoreCase("running")) {
-            return gatewayService.of(server.getId())//
-                    .getBackend()
-                    .sendConsole("Auto shut down not running server: " + server.getId())//
-                    .thenReturn(true);
-        }
-
-        return gatewayService.of(server.getId())//
-                .getServer()//
-                .getPlayers()//
-                .collectList()//
-                .map(players -> server.isAutoTurnOff() && players.size() == 0)//
-                .retry(5)//
-                .doOnError(error -> gatewayService.of(server.getId())//
-                        .getBackend()
-                        .sendConsole("Server not response, auto shutdown: " + server
-                                .getId()))
-                .onErrorReturn(true);
-    }
-
-    private Mono<Void> handleServerShutdown(InitServerRequest server) {
-        return shouldShutdownServer(server).flatMap(shouldShutdown -> {
-            var backend = gatewayService.of(server.getId()).getBackend();
-
-            var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
-
-            if (shouldShutdown) {
-                if (killFlag) {
-                    log.info("Killing server {} due to no player", server.getId());
-                    return shutdown(server.getId())//
-                            .then(backend.sendConsole("Auto shut down server: " + server.getId()));
-                } else {
-                    log.info("Server {} has no players, flag to kill.", server.getId());
-                    serverKillFlags.put(server.getId(), true);
-                    return backend.sendConsole("Server " + server.getId() + " has no players, flag to kill");
-                }
-            } else {
-                if (killFlag) {
-                    serverKillFlags.put(server.getId(), false);
-                    log.info("Remove flag from server {}", server.getId());
-                    return backend.sendConsole("Remove kill flag from server  " + server.getId());
-                }
-            }
-            return Mono.empty();
-        });
-    }
 
     @Scheduled(fixedDelay = 300000)
     private void cron() {
@@ -127,15 +76,70 @@ public class ServerService {
 
         Flux.fromIterable(containers)//
                 .flatMap(container -> {
-                    var server = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                            InitServerRequest.class);
+                    var optional = readMetadataFromContainer(container);
+
+                    if (optional.isEmpty()) {
+                        log.error("Container " + container.getId() + " has no metadata");
+                        return Mono.empty();
+                    }
+
+                    var metadata = optional.orElseThrow();
+                    var server = metadata.getInit();
 
                     var isRunning = container.getState().equalsIgnoreCase("running");
 
                     if (isRunning) {
-                        return handleServerShutdown(server)
-                                .doOnError(error -> log.error("Error when shutdown", error))
-                                .onErrorResume(ignore -> Mono.empty());
+                        return gatewayService.of(server.getId())//
+                                .getServer()//
+                                .getPlayers()//
+                                .collectList()//
+                                .flatMap(players -> {
+                                    boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
+
+                                    var self = dockerService.getSelf();
+                                    var serverImage = dockerClient.inspectImageCmd(server.getImage()).exec();
+
+                                    var isSameServerHash = metadata.getServerImageHash().equals(serverImage.getId());
+                                    var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
+
+                                    if (players.isEmpty() && (!isSameManagerHash || !isSameServerHash)) {
+                                        dockerClient.removeContainerCmd(container.getId()).exec();
+
+                                        return hostFromServer(metadata.getInit().getId(),
+                                                new HostFromSeverRequest(metadata.getInit(), metadata.getHost()));
+                                    }
+
+                                    var backend = gatewayService.of(server.getId()).getBackend();
+                                    var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
+
+                                    if (shouldKill) {
+                                        if (killFlag) {
+                                            return shutdown(server.getId())//
+                                                    .then(backend.sendConsole(
+                                                            "Auto shut down server: " + server.getId()));
+                                        } else {
+                                            log.info("Server {} has no players, flag to kill.", server.getId());
+                                            serverKillFlags.put(server.getId(), true);
+                                            return backend.sendConsole(
+                                                    "Server " + server.getId() + " has no players, flag to kill");
+                                        }
+                                    } else {
+                                        if (killFlag) {
+                                            serverKillFlags.put(server.getId(), false);
+                                            log.info("Remove flag from server {}", server.getId());
+                                            return backend
+                                                    .sendConsole("Remove kill flag from server  " + server.getId());
+                                        }
+                                    }
+
+                                    return Mono.empty();
+                                })//
+                                .retry(5)//
+                                .doOnError(error -> gatewayService.of(server.getId())//
+                                        .getBackend()
+                                        .sendConsole("Server not response, auto shutdown: " + server
+                                                .getId()))
+                                .onErrorComplete();
                     }
 
                     return Mono.empty();
@@ -150,9 +154,9 @@ public class ServerService {
                 .exec();
 
         return Flux.fromIterable(containers)//
-                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                        InitServerRequest.class))
-                .flatMap(server -> gatewayService.of(server.getId()).getBackend().getTotalPlayer())//
+                .map(container -> readMetadataFromContainer(container).orElseThrow())
+                .flatMap(server -> gatewayService.of(server.getInit().getId()).getBackend().getTotalPlayer())//
+                .onErrorReturn(0)//
                 .collectList()//
                 .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
     }
@@ -211,9 +215,8 @@ public class ServerService {
                 .exec();
 
         return Flux.fromIterable(containers)//
-                .map(container -> Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                        InitServerRequest.class))
-                .flatMap(server -> gatewayService.of(server.getId())//
+                .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
+                .flatMap(server -> gatewayService.of(server.getInit().getId())//
                         .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
@@ -255,8 +258,22 @@ public class ServerService {
                 .onErrorResume(error -> Flux.empty());
     }
 
-    public Mono<Void> initServer(InitServerRequest request) {
-        if (request.getPort() <= 0) {
+    private Optional<ServerContainerMetadata> readMetadataFromContainer(Container container) {
+        try {
+            var metdata = container.getLabels().get(Config.serverLabelName);
+            if (metdata == null) {
+                return Optional.empty();
+            }
+
+            return Optional.of(Utils.readJsonAsClass(metdata, ServerContainerMetadata.class));
+        } catch (Exception _e) {
+            return Optional.empty();
+        }
+    }
+
+    public Mono<Void> initServer(HostFromSeverRequest request) {
+
+        if (request.getInit().getPort() <= 0) {
             throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
         }
 
@@ -269,11 +286,21 @@ public class ServerService {
 
             for (var port : container.getPorts()) {
 
-                var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                        InitServerRequest.class);
+                var optional = readMetadataFromContainer(container);
 
-                if (port.getPublicPort() == request.getPort() && !request.getId().equals(oldRequest.getId())) {
-                    log.info("Port " + request.getPort() + " is already used by container: " + container.getId()
+                if (optional.isEmpty()) {
+                    log.error("Container " + container.getId() + " has no metadata");
+                    continue;
+                }
+
+                var metadata = optional.get();
+
+                var hasSamePort = port.getPublicPort() == request.getInit().getPort();
+                var hasSameId = request.getInit().getId().equals(metadata.getInit().getId());
+
+                if (hasSamePort && !hasSameId) {
+                    log.info("Port " + request.getInit().getPort() + " is already used by container: "
+                            + container.getId()
                             + " attempt to delete it");
 
                     if (container.getState().equalsIgnoreCase("running")) {
@@ -289,21 +316,38 @@ public class ServerService {
 
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
-                .withLabelFilter(Map.of(Config.serverIdLabel, request.getId().toString()))//
+                .withLabelFilter(Map.of(Config.serverIdLabel, request.getInit().getId().toString()))//
                 .exec();
 
         if (containers.isEmpty()) {
-            log.warn("Container " + request.getId() + " got deleted, creating new");
+            log.warn("Container " + request.getInit().getId() + " got deleted, creating new");
             containerId = createNewServerContainer(request);
         } else {
             var container = containers.get(0);
             containerId = container.getId();
 
-            var oldRequest = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                    InitServerRequest.class);
+            var optional = readMetadataFromContainer(container);
 
-            if (!oldRequest.equals(request)) {
-                log.info("Found container " + container.getNames()[0] + "with config mismatch, delete container");
+            if (optional.isEmpty()) {
+                log.error("Container " + container.getId() + " has no metadata");
+                dockerClient.removeContainerCmd(container.getId()).exec();
+                containerId = createNewServerContainer(request);
+            }
+
+            var metadata = optional.orElseThrow();
+
+            var self = dockerService.getSelf();
+            var serverImage = dockerClient.inspectImageCmd(request.getInit().getImage()).exec();
+
+            var currentMetadata = new ServerContainerMetadata()//
+                    .setServerImageHash(serverImage.getId())//
+                    .setServerManagerImageHash(self.getId())//
+                    .setHost(request.getHost())//
+                    .setInit(request.getInit());
+
+            if (!metadata.equals(currentMetadata)) {
+                log.info("Found container " + container.getNames()[0] + "with config mismatch, delete container\n old: "
+                        + metadata + "\n new: " + currentMetadata);
 
                 if (container.getState().equalsIgnoreCase("running")) {
                     dockerClient.stopContainerCmd(containerId).exec();
@@ -321,15 +365,19 @@ public class ServerService {
             }
         }
 
-        log.info("Created server: " + request.getName() + " with " + request);
+        log.info("Created server: " + request.getInit().getName() + " with " + request);
 
-        return gatewayService.of(request.getId())//
+        return gatewayService.of(request.getInit().getId())//
                 .getServer()//
-                .ok();
+                .ok()
+                .then(gatewayService.of(request.getInit().getId()).getServer().isHosting())//
+                .flatMap(isHosting -> isHosting //
+                        ? Mono.empty()
+                        : host(request.getInit().getId(), request.getHost()));
     }
 
-    private String createNewServerContainer(InitServerRequest request) {
-        String serverId = request.getId().toString();
+    private String createNewServerContainer(HostFromSeverRequest request) {
+        String serverId = request.getInit().getId().toString();
         String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath()
                 .toString();
 
@@ -341,20 +389,30 @@ public class ServerService {
 
         Ports portBindings = new Ports();
 
-        portBindings.bind(tcp, Ports.Binding.bindPort(request.getPort()));
-        portBindings.bind(udp, Ports.Binding.bindPort(request.getPort()));
+        portBindings.bind(tcp, Ports.Binding.bindPort(request.getInit().getPort()));
+        portBindings.bind(udp, Ports.Binding.bindPort(request.getInit().getPort()));
 
-        log.info("Create new container on port " + request.getPort());
+        log.info("Create new container on port " + request.getInit().getPort());
 
-        var image = request.getImage() == null || request.getImage().isEmpty()
+        var image = request.getInit().getImage() == null || request.getInit().getImage().isEmpty()
                 ? envConfig.docker().mindustryServerImage()
-                : request.getImage();
+                : request.getInit().getImage();
+
+        var self = dockerService.getSelf();
+        var serverImage = dockerClient.inspectImageCmd(request.getInit().getImage()).exec();
+
+        var currentMetadata = new ServerContainerMetadata()//
+                .setServerImageHash(serverImage.getId())//
+                .setServerManagerImageHash(self.getId())//
+                .setHost(request.getHost())//
+                .setInit(request.getInit());
 
         var command = dockerClient.createContainerCmd(image)//
-                .withName(request.getId().toString())//
+                .withName(request.getInit().getId().toString())//
                 .withAttachStdout(true)//
-                .withLabels(Map.of(Config.serverLabelName, Utils.toJsonString(request), Config.serverIdLabel,
-                        request.getId().toString()));
+                .withLabels(Map.of(//
+                        Config.serverLabelName, Utils.toJsonString(currentMetadata),
+                        Config.serverIdLabel, request.getInit().getId().toString()));
 
         var env = new ArrayList<String>();
         var exposedPorts = new ArrayList<ExposedPort>();
@@ -362,8 +420,8 @@ public class ServerService {
         exposedPorts.add(tcp);
         exposedPorts.add(udp);
 
-        env.addAll(request.getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
-        env.add("IS_HUB=" + request.isHub());
+        env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
+        env.add("IS_HUB=" + request.getInit().isHub());
         env.add("SERVER_ID=" + serverId);
 
         if (Config.IS_DEVELOPMENT) {
@@ -388,10 +446,9 @@ public class ServerService {
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
                         .withMemory(419430400l)
-                        .withRestartPolicy(request.isAutoTurnOff()//
+                        .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
-                                : RestartPolicy.unlessStoppedRestart())
-
+                                : RestartPolicy.onFailureRestart(5))
                         .withBinds(bind));
 
         var result = command.exec();
@@ -484,15 +541,10 @@ public class ServerService {
     }
 
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
-
-        return initServer(request.getInit())//
-                .then(gatewayService.of(serverId).getServer().isHosting())//
-                .flatMap(isHosting -> isHosting //
-                        ? Mono.empty()
-                        : host(serverId, request.getHost()));
+        return initServer(request);
     }
 
-    public Mono<Void> host(UUID serverId, StartServerMessageRequest request) {
+    public Mono<Void> host(UUID serverId, HostServerRequest request) {
         var gateway = gatewayService.of(serverId);
 
         return gateway.getServer().isHosting().onErrorReturn(false).flatMap(isHosting -> {
@@ -506,26 +558,19 @@ public class ServerService {
                 return ApiError.badRequest("Server not initialized");
             }
 
-            var server = Utils.readJsonAsClass(container.getLabels().get(Config.serverLabelName),
-                    InitServerRequest.class);
+            var server = readMetadataFromContainer(container).orElseThrow();
 
             String[] preHostCommand = { //
-                    "config name %s".formatted(server.getName()), //
-                    "config desc %s".formatted(server.getDescription())//
+                    "config name %s".formatted(server.getInit().getName()), //
+                    "config desc %s".formatted(server.getInit().getDescription())//
             };
-
-            if (request.getCommands() != null && !request.getCommands().isBlank()) {
-                var commands = request.getCommands().split("\n");
-
-                return gateway.getServer()//
-                        .sendCommand(preHostCommand)//
-                        .then(gateway.getServer().sendCommand(commands))//
-                        .then(waitForHosting(gateway));
-            }
 
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
-                    .then(gateway.getServer().host(request))//
+                    .then(gateway.getServer()
+                            .host(new StartServerMessageRequest()// \
+                                    .setMode(request.getMode())
+                                    .setCommands(request.getHostCommand())))//
                     .then(waitForHosting(gateway));
         });
     }

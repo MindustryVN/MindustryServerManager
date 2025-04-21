@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.command.InspectImageResponse;
 import com.github.dockerjava.api.model.AuthConfig;
 
 import jakarta.annotation.PostConstruct;
@@ -39,5 +40,9 @@ public class DockerService {
             log.info("Image pulled");
         }
 
+    }
+
+    public InspectImageResponse getSelf() {
+        return dockerClient.inspectImageCmd("ghcr.io/mindustryvn/mindustry-content-server").exec();
     }
 }

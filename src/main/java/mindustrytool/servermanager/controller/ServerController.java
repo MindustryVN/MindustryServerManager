@@ -29,12 +29,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.RequiredArgsConstructor;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
-import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
-import mindustrytool.servermanager.types.request.InitServerRequest;
+import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
 import reactor.core.publisher.Flux;
@@ -60,11 +59,6 @@ public class ServerController {
     @GetMapping("/servers")
     public Flux<ServerDto> getServers() {
         return serverService.getServers();
-    }
-
-    @PostMapping("/servers/{id}/init")
-    Mono<Void> initServer(@Validated @RequestBody InitServerRequest request) {
-        return serverService.initServer(request);
     }
 
     @GetMapping("/servers/{id}/files")
@@ -109,12 +103,13 @@ public class ServerController {
     }
 
     @PostMapping("/servers/{id}/host")
-    public Mono<Void> host(@PathVariable("id") UUID serverId, @RequestBody StartServerMessageRequest request) {
+    public Mono<Void> host(@PathVariable("id") UUID serverId, @Validated @RequestBody HostServerRequest request) {
         return serverService.host(serverId, request);
     }
 
     @PostMapping("/servers/{id}/host-from-server")
-    public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId, @RequestBody HostFromSeverRequest request) {
+    public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId,
+            @Validated @RequestBody HostFromSeverRequest request) {
         return serverService.hostFromServer(serverId, request);
     }
 
