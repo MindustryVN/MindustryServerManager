@@ -228,7 +228,8 @@ public class ServerService {
 
         return Flux.fromIterable(containers)//
                 .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
-                .flatMap(server -> gatewayService.of(server.getInit().getId())//
+                .map(server -> server.getInit())//
+                .flatMap(server -> gatewayService.of(server.getId())//
                         .getServer()//
                         .getStats()//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
