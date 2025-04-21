@@ -78,6 +78,7 @@ public class ServerService {
                     var optional = readMetadataFromContainer(container);
 
                     if (optional.isEmpty()) {
+                        dockerClient.removeContainerCmd(container.getId()).exec();
                         log.error("Container " + container.getId() + " has no metadata");
                         return Mono.empty();
                     }
