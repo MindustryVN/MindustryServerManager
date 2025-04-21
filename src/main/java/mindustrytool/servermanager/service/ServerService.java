@@ -96,6 +96,7 @@ public class ServerService {
 
                     var isSameServerHash = metadata.getServerImageHash().equals(serverImage.getId());
                     var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
+                    var backend = gatewayService.of(server.getId()).getBackend();
 
                     if (isRunning) {
                         return gatewayService.of(server.getId())//
@@ -111,11 +112,13 @@ public class ServerService {
                                         }
                                         dockerClient.removeContainerCmd(container.getId()).exec();
 
-                                        return hostFromServer(metadata.getInit().getId(),
-                                                new HostFromSeverRequest(metadata.getInit(), metadata.getHost()));
+                                        return backend.sendConsole(
+                                                "Restart server " + server.getId() + " due mismatch version hash")
+                                                .then(hostFromServer(metadata.getInit().getId(),
+                                                        new HostFromSeverRequest(metadata.getInit(),
+                                                                metadata.getHost())));
                                     }
 
-                                    var backend = gatewayService.of(server.getId()).getBackend();
                                     var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
 
                                     if (shouldKill) {
@@ -152,6 +155,7 @@ public class ServerService {
                                 dockerClient.stopContainerCmd(container.getId()).exec();
                             }
                             dockerClient.removeContainerCmd(container.getId()).exec();
+                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash");
                         }
                         return Mono.empty();
                     }
