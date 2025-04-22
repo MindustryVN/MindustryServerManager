@@ -103,6 +103,7 @@ public class ServerService {
                                 .getServer()//
                                 .getPlayers()//
                                 .collectList()//
+                                .onErrorReturn((List.of()))
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
 
