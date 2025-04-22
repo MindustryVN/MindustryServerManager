@@ -472,7 +472,7 @@ public class ServerService {
                                 .withRetries(5)
                                 .withTimeout(1000000L)
                                 .withTest(List.of(
-                                        "CMD-SHELL",
+                                        "CMD",
                                         "wget --spider -q http://" + serverId.toString()
                                                 + ":9999/ok || exit 1")))
                 .withHostConfig(HostConfig.newHostConfig()//
