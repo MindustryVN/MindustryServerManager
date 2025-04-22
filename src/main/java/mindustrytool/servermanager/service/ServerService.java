@@ -468,9 +468,9 @@ public class ServerService {
                 .withEnv(env)
                 .withHealthcheck(
                         new HealthCheck()//
-                                .withInterval(10000000L)//
+                                .withInterval(10000000000L)//
                                 .withRetries(5)
-                                .withTimeout(1000000L)
+                                .withTimeout(10000000000L) // 10 seconds
                                 .withTest(List.of(
                                         "CMD",
                                         "wget --spider -q http://" + serverId.toString()
