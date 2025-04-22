@@ -113,7 +113,7 @@ public class GatewayService {
                         .bodyValue(command)//
                         .retrieve()//
                         .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(5))//
+                        .timeout(Duration.ofSeconds(10))//
                         .then();
             }
 
@@ -123,7 +123,7 @@ public class GatewayService {
                         .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                         .retrieve()//
                         .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(5))//
+                        .timeout(Duration.ofSeconds(15))//
                         .then();
             }
 
