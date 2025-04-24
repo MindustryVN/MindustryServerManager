@@ -193,7 +193,8 @@ public class GatewayService {
                         .bodyValue(logs)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
-                        .then();
+                        .doOnError((error) -> log.error("Fail to send build log", error))
+                        .onErrorComplete();
             }
 
             public Mono<Void> sendConsole(String console) {
@@ -202,8 +203,9 @@ public class GatewayService {
                         .headers(this::setHeaders)//
                         .bodyValue(console)//
                         .retrieve()//
-                        .bodyToMono(String.class)//
-                        .then();
+                        .bodyToMono(Void.class)//
+                        .doOnError((error) -> log.error("Fail to send to console", error))
+                        .onErrorComplete();
             }
 
             public Mono<Integer> getTotalPlayer() {
