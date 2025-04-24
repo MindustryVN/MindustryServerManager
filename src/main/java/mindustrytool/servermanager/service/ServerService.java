@@ -580,7 +580,7 @@ public class ServerService {
     public Mono<Void> host(UUID serverId, HostServerRequest request) {
         var gateway = gatewayService.of(serverId);
 
-        return gateway.getServer().isHosting().onErrorReturn(false).flatMap(isHosting -> {
+        return gateway.getServer().isHosting().flatMap(isHosting -> {
             if (isHosting) {
                 return Mono.empty();
             }
