@@ -468,9 +468,9 @@ public class ServerService {
                 .withEnv(env)
                 .withHealthcheck(
                         new HealthCheck()//
-                                .withInterval(10000000000L)//
+                                .withInterval(100000000000L)//
                                 .withRetries(5)
-                                .withTimeout(10000000000L) // 10 seconds
+                                .withTimeout(100000000000L) // 10 seconds
                                 .withTest(List.of(
                                         "CMD",
                                         "sh",
