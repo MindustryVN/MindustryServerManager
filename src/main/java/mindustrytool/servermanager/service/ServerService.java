@@ -473,6 +473,8 @@ public class ServerService {
                                 .withTimeout(10000000000L) // 10 seconds
                                 .withTest(List.of(
                                         "CMD",
+                                        "sh",
+                                        "-c",
                                         "wget --spider -q http://" + serverId.toString()
                                                 + ":9999/ok || exit 1")))
                 .withHostConfig(HostConfig.newHostConfig()//
