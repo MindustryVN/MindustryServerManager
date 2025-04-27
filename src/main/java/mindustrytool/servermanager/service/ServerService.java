@@ -105,22 +105,7 @@ public class ServerService {
                                 .onErrorReturn((List.of()))
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
-
-                                    if (!server.isAutoTurnOff() && players.isEmpty()
-                                            && (!isSameManagerHash || !isSameServerHash)) {
-                                        if (container.getState().equalsIgnoreCase("running")) {
-                                            dockerClient.stopContainerCmd(container.getId()).exec();
-                                        }
-                                        dockerClient.removeContainerCmd(container.getId()).exec();
-
-                                        log.info("Restart server " + server.getId() + " due mismatch version hash");
-                                        return backend.sendConsole(
-                                                "Restart server " + server.getId() + " due mismatch version hash")
-                                                .then(hostFromServer(metadata.getInit().getId(),
-                                                        new HostFromSeverRequest(metadata.getInit(),
-                                                                metadata.getHost())));
-                                    }
-
+                        
                                     var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
 
                                     if (shouldKill) {
