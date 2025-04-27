@@ -636,11 +636,6 @@ public class ServerService {
     }
 
     private StatsMessageResponse getStatIfError(UUID serverId) {
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
-                .exec();
-
         var response = new StatsMessageResponse()
                 .setRamUsage(0)
                 .setTotalRam(0)
