@@ -106,7 +106,8 @@ public class ServerService {
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
 
-                                    if (players.isEmpty() && (!isSameManagerHash || !isSameServerHash)) {
+                                    if (!server.isAutoTurnOff() && players.isEmpty()
+                                            && (!isSameManagerHash || !isSameServerHash)) {
                                         if (container.getState().equalsIgnoreCase("running")) {
                                             dockerClient.stopContainerCmd(container.getId()).exec();
                                         }
