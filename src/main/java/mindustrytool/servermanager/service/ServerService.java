@@ -24,7 +24,6 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
-import com.github.dockerjava.api.model.HealthCheck;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.RestartPolicy;
@@ -467,16 +466,16 @@ public class ServerService {
         command.withExposedPorts(exposedPorts)//
                 .withEnv(env)
                 // .withHealthcheck(
-                //         new HealthCheck()//
-                //                 .withInterval(100000000000L)//
-                //                 .withRetries(5)
-                //                 .withTimeout(100000000000L) // 10 seconds
-                //                 .withTest(List.of(
-                //                         "CMD",
-                //                         "sh",
-                //                         "-c",
-                //                         "wget --spider -q http://" + serverId.toString()
-                //                                 + ":9999/ok || exit 1")))
+                // new HealthCheck()//
+                // .withInterval(100000000000L)//
+                // .withRetries(5)
+                // .withTimeout(100000000000L) // 10 seconds
+                // .withTest(List.of(
+                // "CMD",
+                // "sh",
+                // "-c",
+                // "wget --spider -q http://" + serverId.toString()
+                // + ":9999/ok || exit 1")))
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
@@ -642,15 +641,13 @@ public class ServerService {
                 .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
                 .exec();
 
-        var status = !containers.isEmpty() && containers.get(0).getState().equalsIgnoreCase("running") ? "UP" : "DOWN";
-
         var response = new StatsMessageResponse()
                 .setRamUsage(0)
                 .setTotalRam(0)
                 .setPlayers(0)
                 .setMapName("")
                 .setMods(new ArrayList<>())
-                .setStatus(status);
+                .setStatus("DOWN");
 
         return response;
     }
