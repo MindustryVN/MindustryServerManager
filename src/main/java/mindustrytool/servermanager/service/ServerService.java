@@ -636,13 +636,21 @@ public class ServerService {
     }
 
     private StatsMessageResponse getStatIfError(UUID serverId) {
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
+                .exec();
+
+        var status = !containers.isEmpty() && containers.get(0).getState().equalsIgnoreCase("running") ? "NOT_REPONSE"
+                : "DOWN";
+
         var response = new StatsMessageResponse()
                 .setRamUsage(0)
                 .setTotalRam(0)
                 .setPlayers(0)
                 .setMapName("")
                 .setMods(new ArrayList<>())
-                .setStatus("DOWN");
+                .setStatus(status);
 
         return response;
     }
