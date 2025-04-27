@@ -112,6 +112,7 @@ public class ServerService {
                                         }
                                         dockerClient.removeContainerCmd(container.getId()).exec();
 
+                                        log.info("Restart server " + server.getId() + " due mismatch version hash");
                                         return backend.sendConsole(
                                                 "Restart server " + server.getId() + " due mismatch version hash")
                                                 .then(hostFromServer(metadata.getInit().getId(),
