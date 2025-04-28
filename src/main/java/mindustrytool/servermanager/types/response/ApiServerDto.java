@@ -14,7 +14,7 @@ public class ApiServerDto {
     public String mode;
     public int port;
     public String hostCommand;
-    public String status = "DOWN";
+    public String status = "UNSET";
     public boolean official;
     public long ramUsage;
     public long totalRam;

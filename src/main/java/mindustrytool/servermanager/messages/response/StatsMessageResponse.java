@@ -16,5 +16,5 @@ public class StatsMessageResponse {
     public String mapName = "";
     public byte[] mapData;
     public List<String> mods = new ArrayList<>();
-    public String status = "DOWN";
+    public String status = "UNSET";
 }
