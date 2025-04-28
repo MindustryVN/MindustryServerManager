@@ -105,7 +105,7 @@ public class ServerService {
                                 .onErrorReturn((List.of()))
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
-                        
+
                                     var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
 
                                     if (shouldKill) {
@@ -353,43 +353,21 @@ public class ServerService {
                 containerId = createNewServerContainer(request);
             }
 
-            var metadata = optional.orElseThrow();
+            log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
 
-            var self = dockerService.getSelf();
-            var serverImage = dockerClient.inspectImageCmd(request.getInit().getImage()).exec();
-
-            var currentMetadata = new ServerContainerMetadata()//
-                    .setServerImageHash(serverImage.getId())//
-                    .setServerManagerImageHash(self.getId())//
-                    .setHost(request.getHost())//
-                    .setInit(request.getInit());
-
-            if (!metadata.equals(currentMetadata)) {
-                log.info("Found container " + container.getNames()[0] + "with config mismatch, delete container\n old: "
-                        + metadata + "\n new: " + currentMetadata);
-
-                if (container.getState().equalsIgnoreCase("running")) {
-                    dockerClient.stopContainerCmd(containerId).exec();
-                }
-
-                dockerClient.removeContainerCmd(containerId).exec();
-                containerId = createNewServerContainer(request);
-            } else {
-                log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
-
-                if (!container.getState().equalsIgnoreCase("running")) {
-                    log.info("Start container " + container.getNames()[0]);
-                    dockerClient.startContainerCmd(containerId).exec();
-                }
+            if (!container.getState().equalsIgnoreCase("running")) {
+                log.info("Start container " + container.getNames()[0]);
+                dockerClient.startContainerCmd(containerId).exec();
             }
         }
 
-        log.info("Created server: " + request.getInit().getName() + " with " + request);
+        log.info("Created server: " + request.getInit().getName());
 
-        return gatewayService.of(request.getInit().getId())//
-                .getServer()//
+        var serverGateway = gatewayService.of(request.getInit().getId()).getServer();
+
+        return serverGateway//
                 .ok()
-                .then(gatewayService.of(request.getInit().getId()).getServer().isHosting())//
+                .then(serverGateway.isHosting())//
                 .flatMap(isHosting -> isHosting //
                         ? Mono.empty()
                         : host(request.getInit().getId(), request.getHost()));
@@ -567,6 +545,8 @@ public class ServerService {
 
     public Mono<Void> host(UUID serverId, HostServerRequest request) {
         var gateway = gatewayService.of(serverId);
+
+        log.info("Host server: " + serverId);
 
         return gateway.getServer().isHosting().flatMap(isHosting -> {
             if (isHosting) {
