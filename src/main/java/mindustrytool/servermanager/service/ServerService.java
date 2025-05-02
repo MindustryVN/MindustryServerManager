@@ -608,8 +608,13 @@ public class ServerService {
                 .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
                 .exec();
 
-        var status = !containers.isEmpty() && containers.get(0).getState().equalsIgnoreCase("running") ? "NOT_RESPONSE"
-                : "DOWN";
+        var status = containers.isEmpty() //
+                ? "DELETED"
+                : !containers.get(0)//
+                        .getState()//
+                        .equalsIgnoreCase("running")//
+                                ? "NOT_RESPONSE"
+                                : "DOWN";
 
         var response = new StatsMessageResponse()
                 .setRamUsage(0)
