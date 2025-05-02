@@ -19,10 +19,14 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import jakarta.annotation.PostConstruct;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 @Configuration
 @EnableScheduling
 public class Config implements WebFluxConfigurer {
+
+    public static final Scheduler QUEUE_SCHEDULER = Schedulers.newSingle("queue-scheduler");
 
     public static final String ENV = System.getenv("ENV");
 
@@ -56,14 +60,15 @@ public class Config implements WebFluxConfigurer {
     public ObjectMapper getObjectMapper() {
         JavaTimeModule module = new JavaTimeModule();
 
-        return new ObjectMapper(new JsonFactoryBuilder().streamReadConstraints(StreamReadConstraints.builder().maxStringLength(Integer.MAX_VALUE).build())//
+        return new ObjectMapper(new JsonFactoryBuilder()
+                .streamReadConstraints(StreamReadConstraints.builder().maxStringLength(Integer.MAX_VALUE).build())//
                 .configure(StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION, false).build())//
-                        .configure(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS, false)//
-                        .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)//
-                        .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)//
-                        .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)//
-                        .setSerializationInclusion(JsonInclude.Include.NON_NULL)//
-                        .registerModule(module);
+                .configure(DeserializationFeature.FAIL_ON_UNRESOLVED_OBJECT_IDS, false)//
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)//
+                .configure(DeserializationFeature.ACCEPT_SINGLE_VALUE_AS_ARRAY, true)//
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)//
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL)//
+                .registerModule(module);
     }
 
 }

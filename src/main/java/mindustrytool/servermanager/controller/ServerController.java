@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.RequiredArgsConstructor;
+import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
@@ -110,7 +111,7 @@ public class ServerController {
     @PostMapping("/servers/{id}/host-from-server")
     public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId,
             @Validated @RequestBody HostFromSeverRequest request) {
-        return serverService.hostFromServer(serverId, request);
+        return serverService.hostFromServer(serverId, request).subscribeOn(Config.QUEUE_SCHEDULER);
     }
 
     @PostMapping("/servers/{id}/set-player")
