@@ -220,9 +220,7 @@ public class ServerService {
         return Flux.fromIterable(containers)//
                 .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
                 .map(server -> server.getInit())//
-                .flatMap(server -> gatewayService.of(server.getId())//
-                        .getServer()//
-                        .getStats()//
+                .flatMap(server -> stats(server.getId())//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
                         .onErrorResume(ignore -> Mono
                                 .just(modelMapper.map(server, ServerDto.class).setUsage(new StatsMessageResponse())))//
@@ -242,11 +240,8 @@ public class ServerService {
                 .awaitResult();
 
         var metadata = readMetadataFromContainer(container).orElseThrow();
-        ;
 
-        return gatewayService.of(id)//
-                .getServer()//
-                .getStats()//
+        return stats(id)//
                 .map(stats -> {
                     var dto = modelMapper.map(metadata.getInit(), ServerDto.class);
                     if (containerStats != null) {
@@ -590,13 +585,15 @@ public class ServerService {
     }
 
     public Mono<StatsMessageResponse> stats(UUID serverId) {
-        return gatewayService.of(serverId).getServer()//
+        return gatewayService.of(serverId)//
+                .getServer()//
                 .getStats()//
                 .onErrorReturn(getStatIfError(serverId));
     }
 
     public Mono<StatsMessageResponse> detailStats(UUID serverId) {
-        return gatewayService.of(serverId).getServer()//
+        return gatewayService.of(serverId)//
+                .getServer()//
                 .getDetailStats()//
                 .onErrorReturn(getStatIfError(serverId));
 
