@@ -62,6 +62,7 @@ public class ServerService {
     private final DockerService dockerService;
 
     public final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Mono<Void>> hostingLocks = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
@@ -543,7 +544,7 @@ public class ServerService {
 
         log.info("Host server: " + serverId);
 
-        return gateway.getServer().isHosting().flatMap(isHosting -> {
+        return hostingLocks.computeIfAbsent(serverId, id -> gateway.getServer().isHosting().flatMap(isHosting -> {
             if (isHosting) {
                 return Mono.empty();
             }
@@ -568,7 +569,9 @@ public class ServerService {
                                     .setMode(request.getMode())
                                     .setCommands(request.getHostCommand())))//
                     .then(waitForHosting(gateway));
-        });
+        })
+                .doOnTerminate(() -> hostingLocks.remove(serverId))
+                .cache());
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
