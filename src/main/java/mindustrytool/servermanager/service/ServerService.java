@@ -607,7 +607,7 @@ public class ServerService {
 
         var status = containers.isEmpty() //
                 ? "DELETED"
-                : !containers.get(0)//
+                : containers.get(0)//
                         .getState()//
                         .equalsIgnoreCase("running")//
                                 ? "NOT_RESPONSE"
