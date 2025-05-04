@@ -143,7 +143,8 @@ public class ServerService {
                                 dockerClient.stopContainerCmd(container.getId()).exec();
                             }
                             dockerClient.removeContainerCmd(container.getId()).exec();
-                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash");
+
+                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash").subscribe();
                         }
                         return Mono.empty();
                     }
