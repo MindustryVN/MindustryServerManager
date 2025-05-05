@@ -64,18 +64,26 @@ public class ServerService {
     private final GatewayService gatewayService;
     private final DockerService dockerService;
 
-    public final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, Mono<Void>> hostingLocks = new ConcurrentHashMap<>();
+    private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
-    private final HashMap<UUID, Statistics> stats = new HashMap<UUID, Statistics>();
+    private record ContainerStats(
+            float cpuUsage,
+            float ramUsage, // in MB
+            float totalRam // in MB
+    ) {
+    }
 
-    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.SECONDS)
+    private final HashMap<UUID, ContainerStats> stats = new HashMap<>();
+
+    @Scheduled(fixedDelay = 3, timeUnit = TimeUnit.SECONDS)
     private void updateStats() {
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(List.of(Config.serverLabelName))//
+        var containers = dockerClient.listContainersCmd()
+                .withShowAll(true)
+                .withLabelFilter(List.of(Config.serverLabelName))
                 .exec();
 
         for (var container : containers) {
@@ -87,16 +95,47 @@ public class ServerService {
                 }
                 dockerClient.removeContainerCmd(container.getId()).exec();
                 log.error("Container " + container.getId() + " has no metadata");
+                continue;
             }
 
             var metadata = optional.orElseThrow();
+            UUID id = metadata.getInit().getId();
 
-            var containerStats = dockerClient.statsCmd(container.getId())
+            var newStats = dockerClient.statsCmd(container.getId())
                     .withNoStream(true)
-                    .exec(new AsyncResultCallback<>())//
+                    .exec(new AsyncResultCallback<>())
                     .awaitResult();
 
-            stats.put(metadata.getInit().getId(), containerStats);
+            statsSnapshots.compute(id, (key, prev) -> {
+                if (prev == null)
+                    return new Statistics[] { null, newStats };
+                return new Statistics[] { prev[1], newStats };
+            });
+
+            var snapshots = statsSnapshots.get(id);
+            float cpuPercent = 0f;
+
+            if (snapshots != null && snapshots[0] != null && snapshots[1] != null) {
+                long cpuDelta = snapshots[1].getCpuStats().getCpuUsage().getTotalUsage()
+                        - snapshots[0].getCpuStats().getCpuUsage().getTotalUsage();
+
+                long systemDelta = snapshots[1].getCpuStats().getSystemCpuUsage()
+                        - snapshots[0].getCpuStats().getSystemCpuUsage();
+
+                long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
+
+                if (systemDelta > 0 && cpuCores > 0) {
+                    cpuPercent = (float) cpuDelta / systemDelta * cpuCores * 100.0f;
+                }
+            }
+
+            long memUsage = newStats.getMemoryStats().getUsage(); // bytes
+            long memLimit = newStats.getMemoryStats().getLimit(); // bytes
+
+            float ramMB = memUsage / (1024f * 1024f);
+            float totalRamMB = memLimit / (1024f * 1024f);
+
+            stats.put(id, new ContainerStats(cpuPercent, ramMB, totalRamMB));
         }
     }
 
@@ -278,9 +317,9 @@ public class ServerService {
                 .map(stats -> {
                     var dto = modelMapper.map(metadata.getInit(), ServerDto.class);
                     if (containerStats != null) {
-                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
-                                .setTotalRam(containerStats.getMemoryStats().getLimit())//
-                                .setRamUsage(containerStats.getMemoryStats().getUsage());
+                        stats.setCpuUsage(containerStats.cpuUsage())//
+                                .setTotalRam(containerStats.totalRam())//
+                                .setRamUsage(containerStats.ramUsage());
                     }
                     return dto.setUsage(stats);
                 });
@@ -631,9 +670,9 @@ public class ServerService {
                     }
                     var containerStats = stats.get(serverId);
                     if (containerStats != null) {
-                        serverStats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
-                                .setTotalRam(containerStats.getMemoryStats().getLimit())//
-                                .setRamUsage(containerStats.getMemoryStats().getUsage());
+                        serverStats.setCpuUsage(containerStats.cpuUsage())//
+                                .setTotalRam(containerStats.totalRam())//
+                                .setRamUsage(containerStats.ramUsage());
                     }
 
                     return serverStats;
@@ -654,9 +693,9 @@ public class ServerService {
                     var containerStats = stats.get(serverId);
 
                     if (containerStats != null) {
-                        serverStats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
-                                .setTotalRam(containerStats.getMemoryStats().getLimit())//
-                                .setRamUsage(containerStats.getMemoryStats().getUsage());
+                        serverStats.setCpuUsage(containerStats.cpuUsage())//
+                                .setTotalRam(containerStats.totalRam())//
+                                .setRamUsage(containerStats.ramUsage());
                     }
 
                     return serverStats;

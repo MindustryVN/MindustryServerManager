@@ -16,8 +16,8 @@ public class ApiServerDto {
     public String hostCommand;
     public String status = "UNSET";
     public boolean official;
-    public long ramUsage;
-    public long totalRam;
+    public float ramUsage;
+    public float totalRam;
     public long players;
     public String mapName;
     private List<String> mods;
