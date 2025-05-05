@@ -511,7 +511,7 @@ public class ServerService {
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
-                        .withMemory(419430400l)
+                        .withMemory(524288000l)
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
