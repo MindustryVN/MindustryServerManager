@@ -11,7 +11,7 @@ import lombok.experimental.Accessors;
 public class StatsMessageResponse {
     public long ramUsage = 0;
     public long totalRam = 0;
-    public float cpuUsage = 0;
+    public long cpuUsage = 0l;
     public long players = 0;
     public String mapName = "";
     public byte[] mapData;
