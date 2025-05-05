@@ -144,7 +144,8 @@ public class ServerService {
                             }
                             dockerClient.removeContainerCmd(container.getId()).exec();
 
-                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash").subscribe();
+                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash")
+                                    .subscribe();
                         }
                         return Mono.empty();
                     }
@@ -247,9 +248,9 @@ public class ServerService {
                 .map(stats -> {
                     var dto = modelMapper.map(metadata.getInit(), ServerDto.class);
                     if (containerStats != null) {
-                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage());
-                        stats.setTotalRam(containerStats.getMemoryStats().getLimit());
-                        stats.setRamUsage(containerStats.getMemoryStats().getUsage());
+                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
+                                .setTotalRam(containerStats.getMemoryStats().getLimit())//
+                                .setRamUsage(containerStats.getMemoryStats().getUsage());
                     }
                     return dto.setUsage(stats);
                 });
@@ -592,6 +593,26 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
+                .map(stats -> {
+                    var container = findContainerByServerId(serverId);
+
+                    if (container == null) {
+                        return stats;
+                    }
+
+                    var containerStats = dockerClient.statsCmd(container.getId())
+                            .withNoStream(true)
+                            .exec(new AsyncResultCallback<>())//
+                            .awaitResult();
+
+                    if (containerStats != null) {
+                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
+                                .setTotalRam(containerStats.getMemoryStats().getLimit())//
+                                .setRamUsage(containerStats.getMemoryStats().getUsage());
+                    }
+
+                    return stats;
+                })
                 .onErrorReturn(getStatIfError(serverId));
     }
 
@@ -599,6 +620,26 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getDetailStats()//
+                .map(stats -> {
+                    var container = findContainerByServerId(serverId);
+
+                    if (container == null) {
+                        return stats;
+                    }
+
+                    var containerStats = dockerClient.statsCmd(container.getId())
+                            .withNoStream(true)
+                            .exec(new AsyncResultCallback<>())//
+                            .awaitResult();
+                            
+                    if (containerStats != null) {
+                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
+                                .setTotalRam(containerStats.getMemoryStats().getLimit())//
+                                .setRamUsage(containerStats.getMemoryStats().getUsage());
+                    }
+
+                    return stats;
+                })
                 .onErrorReturn(getStatIfError(serverId));
 
     }
