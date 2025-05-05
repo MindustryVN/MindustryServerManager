@@ -6,11 +6,13 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
@@ -27,6 +29,7 @@ import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.RestartPolicy;
+import com.github.dockerjava.api.model.Statistics;
 import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.InvocationBuilder.AsyncResultCallback;
 
@@ -66,7 +69,38 @@ public class ServerService {
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
-    @Scheduled(fixedDelay = 300000)
+    private final HashMap<UUID, Statistics> stats = new HashMap<UUID, Statistics>();
+
+    @Scheduled(fixedDelay = 10, timeUnit = TimeUnit.SECONDS)
+    private void updateStats() {
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        for (var container : containers) {
+            var optional = readMetadataFromContainer(container);
+
+            if (optional.isEmpty()) {
+                if (container.getState().equalsIgnoreCase("running")) {
+                    dockerClient.stopContainerCmd(container.getId()).exec();
+                }
+                dockerClient.removeContainerCmd(container.getId()).exec();
+                log.error("Container " + container.getId() + " has no metadata");
+            }
+
+            var metadata = optional.orElseThrow();
+
+            var containerStats = dockerClient.statsCmd(container.getId())
+                    .withNoStream(true)
+                    .exec(new AsyncResultCallback<>())//
+                    .awaitResult();
+
+            stats.put(metadata.getInit().getId(), containerStats);
+        }
+    }
+
+    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     private void cron() {
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
@@ -237,11 +271,7 @@ public class ServerService {
             return Mono.just(new ServerDto().setStatus("DELETED"));
         }
 
-        var containerStats = dockerClient.statsCmd(container.getId())
-                .withNoStream(true)
-                .exec(new AsyncResultCallback<>())//
-                .awaitResult();
-
+        var containerStats = stats.get(id);
         var metadata = readMetadataFromContainer(container).orElseThrow();
 
         return stats(id)//
@@ -593,25 +623,20 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
-                .map(stats -> {
+                .map(serverStats -> {
                     var container = findContainerByServerId(serverId);
 
                     if (container == null) {
-                        return stats;
+                        return serverStats;
                     }
-
-                    var containerStats = dockerClient.statsCmd(container.getId())
-                            .withNoStream(true)
-                            .exec(new AsyncResultCallback<>())//
-                            .awaitResult();
-
+                    var containerStats = stats.get(serverId);
                     if (containerStats != null) {
-                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
+                        serverStats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
                                 .setTotalRam(containerStats.getMemoryStats().getLimit())//
                                 .setRamUsage(containerStats.getMemoryStats().getUsage());
                     }
 
-                    return stats;
+                    return serverStats;
                 })
                 .onErrorReturn(getStatIfError(serverId));
     }
@@ -620,25 +645,21 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getDetailStats()//
-                .map(stats -> {
+                .map(serverStats -> {
                     var container = findContainerByServerId(serverId);
 
                     if (container == null) {
-                        return stats;
+                        return serverStats;
                     }
+                    var containerStats = stats.get(serverId);
 
-                    var containerStats = dockerClient.statsCmd(container.getId())
-                            .withNoStream(true)
-                            .exec(new AsyncResultCallback<>())//
-                            .awaitResult();
-                            
                     if (containerStats != null) {
-                        stats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
+                        serverStats.setCpuUsage(containerStats.getCpuStats().getCpuUsage().getTotalUsage())//
                                 .setTotalRam(containerStats.getMemoryStats().getLimit())//
                                 .setRamUsage(containerStats.getMemoryStats().getUsage());
                     }
 
-                    return stats;
+                    return serverStats;
                 })
                 .onErrorReturn(getStatIfError(serverId));
 
