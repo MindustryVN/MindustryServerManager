@@ -22,24 +22,29 @@ public class DockerService {
     private final EnvConfig envConfig;
 
     @PostConstruct
-    void init() throws InterruptedException {
-        boolean imageExists = dockerClient.listImagesCmd()//
-                .exec()//
-                .stream()//
-                .anyMatch(image -> List.of(image.getRepoTags()).contains(envConfig.docker().mindustryServerImage()));
+    void init() {
+        try {
+            boolean imageExists = dockerClient.listImagesCmd()//
+                    .exec()//
+                    .stream()//
+                    .anyMatch(
+                            image -> List.of(image.getRepoTags()).contains(envConfig.docker().mindustryServerImage()));
 
-        if (!imageExists) {
-            log.info("Image not exits, pulling image with name: " + envConfig.docker().mindustryServerImage());
-            dockerClient.pullImageCmd(envConfig.docker().mindustryServerImage())//
-                    .withAuthConfig(new AuthConfig()//
-                            .withUsername(envConfig.docker().username())//
-                            .withIdentityToken(envConfig.docker().authToken()))
-                    .start()//
-                    .awaitCompletion();
+            if (!imageExists) {
+                log.info("Image not exits, pulling image with name: " + envConfig.docker().mindustryServerImage());
+                dockerClient.pullImageCmd(envConfig.docker().mindustryServerImage())//
+                        .withAuthConfig(new AuthConfig()//
+                                .withUsername(envConfig.docker().username())//
+                                .withIdentityToken(envConfig.docker().authToken()))
+                        .start()//
+                        .awaitCompletion();
 
-            log.info("Image pulled");
+                log.info("Image pulled");
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to pull server image", error);
         }
-
     }
 
     public InspectImageResponse getSelf() {
