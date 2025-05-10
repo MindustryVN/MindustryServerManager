@@ -515,6 +515,7 @@ public class ServerService {
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
+                        .withAutoRemove(request.getInit().isAutoTurnOff())
                         .withBinds(bind));
 
         var result = command.exec();
