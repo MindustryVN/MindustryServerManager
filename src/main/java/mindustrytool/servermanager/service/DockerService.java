@@ -43,7 +43,7 @@ public class DockerService {
             }
 
         } catch (Exception e) {
-            log.error("Failed to pull server image", error);
+            log.error("Failed to pull server image", e);
         }
     }
 
