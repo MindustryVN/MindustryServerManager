@@ -149,7 +149,7 @@ public class GatewayService {
                         .build().toUriString();
             }
 
-            public Mono<SetPlayerMessageRequest> setPlayer(UUID id, PlayerMessageRequest payload) {
+            public Mono<SetPlayerMessageRequest> setPlayer(PlayerMessageRequest payload) {
                 return WebClient.create(backendUri("servers", id.toString(), "players"))//
                         .post()//
                         .headers(this::setHeaders)//
@@ -168,8 +168,8 @@ public class GatewayService {
                         .map(server -> new GetServersMessageResponse().setServers(server));
             }
 
-            public Mono<String> host(String serverId) {
-                return WebClient.create(backendUri("servers", serverId, "host-from-server"))//
+            public Mono<String> host() {
+                return WebClient.create(backendUri("servers", id.toString(), "host-from-server"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .retrieve()//
@@ -177,7 +177,7 @@ public class GatewayService {
             }
 
             public Mono<Void> sendChat(String chat) {
-                return WebClient.create(backendUri("servers", "chat"))//
+                return WebClient.create(backendUri("servers", id.toString(), "chat"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .bodyValue(chat)//
@@ -186,8 +186,8 @@ public class GatewayService {
                         .then();
             }
 
-            public Mono<Void> sendBuildLog(UUID serverId, ArrayList<BuildLog> logs) {
-                return WebClient.create(backendUri("servers", serverId.toString(), "build-log"))//
+            public Mono<Void> sendBuildLog(ArrayList<BuildLog> logs) {
+                return WebClient.create(backendUri("servers", id.toString(), "build-log"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .bodyValue(logs)//
@@ -198,7 +198,7 @@ public class GatewayService {
             }
 
             public Mono<Void> sendConsole(String console) {
-                return WebClient.create(backendUri("servers", "console"))//
+                return WebClient.create(backendUri("servers", id.toString(), "console"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .bodyValue(console)//

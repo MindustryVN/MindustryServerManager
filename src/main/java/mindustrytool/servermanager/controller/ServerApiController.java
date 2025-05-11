@@ -31,12 +31,12 @@ public class ServerApiController {
 
     @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(server.getId(), payload));
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(payload));
     }
 
     @PostMapping(value = "build-log", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<Void> logBuild(@RequestBody ArrayList<BuildLog> payload) {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().sendBuildLog(server.getId(), payload));
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().sendBuildLog(payload));
     }
 
     @GetMapping("total-player")
@@ -57,7 +57,7 @@ public class ServerApiController {
 
     @PostMapping(value = "host", consumes = MediaType.TEXT_PLAIN_VALUE)
     public Mono<String> host(@RequestBody String serverId) {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().host(serverId));
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().host());
     }
 
     @GetMapping("servers")
