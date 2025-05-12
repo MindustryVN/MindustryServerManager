@@ -25,6 +25,7 @@ import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.BuildLog;
 import mindustrytool.servermanager.types.response.ApiServerDto;
+import mindustrytool.servermanager.messages.response.ServerCommandDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -108,7 +109,7 @@ public class GatewayService {
             }
 
             public Mono<Void> sendCommand(String... command) {
-                return WebClient.create(serverUri("command"))//
+                return WebClient.create(serverUri("commands"))//
                         .post()//
                         .bodyValue(command)//
                         .retrieve()//
@@ -134,6 +135,14 @@ public class GatewayService {
                         .bodyToMono(Boolean.class)//
                         .timeout(Duration.ofSeconds(1))//
                         .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)));
+            }
+
+            public Flux<ServerCommandDto> getCommands() {
+                return WebClient.create(serverUri("commands"))//
+                        .get()//
+                        .retrieve()//
+                        .bodyToFlux(ServerCommandDto.class)//
+                        .timeout(Duration.ofSeconds(10));
             }
         }
 

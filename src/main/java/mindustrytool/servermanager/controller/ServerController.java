@@ -30,7 +30,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
+import mindustrytool.servermanager.messages.response.ServerCommandDto;
 import mindustrytool.servermanager.messages.response.StatsMessageResponse;
+import mindustrytool.servermanager.service.GatewayService;
 import mindustrytool.servermanager.service.ServerService;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
@@ -46,6 +48,7 @@ import reactor.core.publisher.Mono;
 public class ServerController {
 
     private final ServerService serverService;
+    private final GatewayService gatewayService;
 
     @GetMapping("/servers/{id}")
     public Mono<ServerDto> getServer(@PathVariable("id") UUID serverId) {
@@ -98,7 +101,12 @@ public class ServerController {
         return serverService.deleteFile(serverId, URLDecoder.decode(path, StandardCharsets.UTF_8));
     }
 
-    @PostMapping("/servers/{id}/command")
+    @GetMapping("/servers/{id}/commands")
+    public Flux<ServerCommandDto> getCommand(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getCommands();
+    }
+
+    @PostMapping("/servers/{id}/commands")
     public Mono<Void> sendCommand(@PathVariable("id") UUID serverId, @RequestBody String command) {
         return serverService.sendCommand(serverId, command);
     }
