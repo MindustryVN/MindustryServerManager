@@ -105,7 +105,7 @@ public class ServerService {
                     .exec(new AsyncResultCallback<>())
                     .awaitResult();
 
-            statsSnapshots.compute(id, (key, prev) -> {
+            statsSnapshots.compute(id, (_, prev) -> {
                 if (prev == null)
                     return new Statistics[] { null, newStats };
                 return new Statistics[] { prev[1], newStats };
@@ -204,7 +204,7 @@ public class ServerService {
                                     return Mono.empty();
                                 })//
                                 .retry(5)//
-                                .doOnError(error -> gatewayService.of(server.getId())//
+                                .doOnError(_ -> gatewayService.of(server.getId())//
                                         .getBackend()
                                         .sendConsole("Server not response, auto shutdown: " + server
                                                 .getId()))
@@ -297,7 +297,7 @@ public class ServerService {
                 .map(server -> server.getInit())//
                 .flatMap(server -> stats(server.getId())//
                         .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
-                        .onErrorResume(ignore -> Mono
+                        .onErrorResume(_ -> Mono
                                 .just(modelMapper.map(server, ServerDto.class).setUsage(new StatsMessageResponse())))//
                 );
     }
@@ -328,7 +328,7 @@ public class ServerService {
         return gatewayService.of(id).getServer()//
                 .getPlayers()//
                 .doOnError(error -> log.error("Failed to get players", error))//
-                .onErrorResume(error -> Flux.empty());
+                .onErrorResume(_ -> Flux.empty());
     }
 
     private Optional<ServerContainerMetadata> readMetadataFromContainer(Container container) {

@@ -153,7 +153,7 @@ public class GatewayService {
             }
 
             public String backendUri(String... resource) {
-                return UriComponentsBuilder.fromHttpUrl(
+                return UriComponentsBuilder.fromUriString(
                         String.join("/", envConfig.serverConfig().serverUrl(), "api/v3", String.join("/", resource)))
                         .build().toUriString();
             }
