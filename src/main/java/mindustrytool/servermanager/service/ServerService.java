@@ -642,7 +642,7 @@ public class ServerService {
                                     .setCommands(request.getHostCommand())))//
                     .then(waitForHosting(gateway));
         })
-                .doOnTerminate(() -> hostingLocks.remove(serverId)));
+                .doFinally((_) -> hostingLocks.remove(serverId)));
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
