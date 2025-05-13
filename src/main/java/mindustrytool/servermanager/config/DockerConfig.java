@@ -1,6 +1,5 @@
 package mindustrytool.servermanager.config;
 
-import java.net.URI;
 import java.time.Duration;
 
 import org.springframework.context.annotation.Bean;
@@ -19,13 +18,15 @@ public class DockerConfig {
     @Bean
     DockerClientConfig defaultConfig() {
         return DefaultDockerClientConfig.createDefaultConfigBuilder()//
+                .withDockerHost("unix:///var/run/docker.sock")
                 .build();
     }
 
     @Bean
     DockerHttpClient httpClient(DockerClientConfig config) {
-        return new ApacheDockerHttpClient.Builder()//
-                .dockerHost(URI.create("unix:///var/run/docker.sock"))//
+        System.out.println("Docker host: " + config.getDockerHost());
+
+        return new ApacheDockerHttpClient.Builder().dockerHost(config.getDockerHost())//
                 .sslConfig(config.getSSLConfig())//
                 .maxConnections(20)//
                 .connectionTimeout(Duration.ofSeconds(5))//
