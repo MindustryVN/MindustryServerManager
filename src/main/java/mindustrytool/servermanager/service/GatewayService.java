@@ -177,8 +177,8 @@ public class GatewayService {
                         .map(server -> new GetServersMessageResponse().setServers(server));
             }
 
-            public Mono<String> host() {
-                return WebClient.create(backendUri("servers", id.toString(), "host-from-server"))//
+            public Mono<String> host(String serverId) {
+                return WebClient.create(backendUri("servers", serverId, "host-from-server"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .retrieve()//

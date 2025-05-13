@@ -57,7 +57,7 @@ public class ServerApiController {
 
     @PostMapping(value = "host", consumes = MediaType.TEXT_PLAIN_VALUE)
     public Mono<String> host(@RequestBody String serverId) {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().host());
+        return ServerFilter.getContext().flatMap(server -> server.getBackend().host(serverId));
     }
 
     @GetMapping("servers")
