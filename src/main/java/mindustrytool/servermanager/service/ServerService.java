@@ -118,8 +118,8 @@ public class ServerService {
                 long cpuDelta = snapshots[1].getCpuStats().getCpuUsage().getTotalUsage()
                         - snapshots[0].getCpuStats().getCpuUsage().getTotalUsage();
 
-                long systemDelta = snapshots[1].getCpuStats().getSystemCpuUsage()
-                        - snapshots[0].getCpuStats().getSystemCpuUsage();
+                long systemDelta = Optional.ofNullable(snapshots[1].getCpuStats().getSystemCpuUsage()).orElse(0L)
+                        - Optional.ofNullable(snapshots[0].getCpuStats().getSystemCpuUsage()).orElse(0L);
 
                 long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
 
@@ -128,8 +128,8 @@ public class ServerService {
                 }
             }
 
-            long memUsage = newStats.getMemoryStats().getUsage(); // bytes
-            long memLimit = newStats.getMemoryStats().getLimit(); // bytes
+            long memUsage = Optional.ofNullable(newStats.getMemoryStats().getUsage()).orElse(0L); // bytes
+            long memLimit = Optional.ofNullable(newStats.getMemoryStats().getLimit()).orElse(0L); // bytes
 
             float ramMB = memUsage / (1024f * 1024f);
             float totalRamMB = memLimit / (1024f * 1024f);
@@ -511,7 +511,7 @@ public class ServerService {
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
                         .withMemory(524288000l)
-                        .withCpuPeriod(100_000L) 
+                        .withCpuPeriod(100_000L)
                         .withCpuQuota(70_000L)
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
