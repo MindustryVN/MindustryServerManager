@@ -18,6 +18,7 @@ public class DockerConfig {
     @Bean
     DockerClientConfig defaultConfig() {
         return DefaultDockerClientConfig.createDefaultConfigBuilder()//
+                .withDockerHost("unix:///var/run/docker.sock")
                 .build();
     }
 
