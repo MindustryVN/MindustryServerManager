@@ -167,6 +167,15 @@ public class GatewayService {
                         .bodyToMono(SetPlayerMessageRequest.class);
             }
 
+            public Mono<Void> setStats(StatsMessageResponse payload) {
+                return WebClient.create(backendUri("servers", id.toString(), "stats"))//
+                        .post()//
+                        .headers(this::setHeaders)//
+                        .bodyValue(payload)//
+                        .retrieve()//
+                        .bodyToMono(Void.class);
+            }
+
             public Mono<GetServersMessageResponse> getServers(int page, int size) {
                 return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
                         .get()//

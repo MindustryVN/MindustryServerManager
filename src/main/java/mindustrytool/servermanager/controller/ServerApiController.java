@@ -31,7 +31,18 @@ public class ServerApiController {
 
     @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
     public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
-        return ServerFilter.getContext().flatMap(server -> server.getBackend().setPlayer(payload));
+        return ServerFilter.getContext()
+                .flatMap(server -> server.getBackend()//
+                        .setPlayer(payload)//
+                        .doOnNext(_ignore -> serverService
+                                .stats(server.getId()).flatMap(stats -> server.getBackend().setStats(stats))
+                                .subscribe()));
+    }
+
+    @PostMapping(value = "players/leave", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Mono<Void> onPlayerLeave(@RequestBody PlayerMessageRequest payload) {
+        return ServerFilter.getContext().flatMap(
+                server -> serverService.stats(server.getId()).flatMap(stats -> server.getBackend().setStats(stats)));
     }
 
     @PostMapping(value = "build-log", consumes = MediaType.APPLICATION_JSON_VALUE)
