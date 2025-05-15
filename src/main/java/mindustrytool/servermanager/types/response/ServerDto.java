@@ -1,21 +1,24 @@
 package mindustrytool.servermanager.types.response;
 
+import java.util.List;
 import java.util.UUID;
 
 import lombok.Data;
-import lombok.experimental.Accessors;
-import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 
 @Data
-@Accessors(chain = true)
 public class ServerDto {
-    private UUID id;
-    private UUID userId;
-    private String name;
-    private String description;
-    private String mode;
-    private String status;
-    private int port;
-    private StatsMessageResponse usage;
-
+    public UUID id;
+    public UUID userId;
+    public String name;
+    public String description;
+    public String mode;
+    public int port;
+    public String hostCommand;
+    public String status = "UNSET";
+    public boolean official;
+    public float ramUsage;
+    public float totalRam;
+    public long players;
+    public String mapName;
+    private List<String> mods;
 }

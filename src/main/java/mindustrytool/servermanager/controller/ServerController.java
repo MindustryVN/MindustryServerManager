@@ -29,16 +29,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.RequiredArgsConstructor;
 import mindustrytool.servermanager.config.Config;
-import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
-import mindustrytool.servermanager.messages.response.ServerCommandDto;
-import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.GatewayService;
 import mindustrytool.servermanager.service.ServerService;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.HostServerRequest;
-import mindustrytool.servermanager.types.response.ServerDto;
+import mindustrytool.servermanager.types.response.MindustryPlayerDto;
+import mindustrytool.servermanager.types.response.ServerCommandDto;
+import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
+import mindustrytool.servermanager.types.response.StatsDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -51,7 +51,7 @@ public class ServerController {
     private final GatewayService gatewayService;
 
     @GetMapping("/servers/{id}")
-    public Mono<ServerDto> getServer(@PathVariable("id") UUID serverId) {
+    public Mono<ServerWithStatsDto> getServer(@PathVariable("id") UUID serverId) {
         return serverService.getServer(serverId);
     }
 
@@ -61,7 +61,7 @@ public class ServerController {
     }
 
     @GetMapping("/servers")
-    public Flux<ServerDto> getServers() {
+    public Flux<ServerWithStatsDto> getServers() {
         return serverService.getServers();
     }
 
@@ -123,12 +123,12 @@ public class ServerController {
     }
 
     @PostMapping("/servers/{id}/set-player")
-    public Mono<Void> setPlayer(@PathVariable("id") UUID serverId, @RequestBody SetPlayerMessageRequest request) {
+    public Mono<Void> setPlayer(@PathVariable("id") UUID serverId, @RequestBody MindustryPlayerDto request) {
         return serverService.setPlayer(serverId, request);
     }
 
     @GetMapping("/servers/{id}/stats")
-    public Mono<StatsMessageResponse> stats(@PathVariable("id") UUID serverId) {
+    public Mono<StatsDto> stats(@PathVariable("id") UUID serverId) {
         return serverService.stats(serverId);
     }
 
@@ -143,7 +143,7 @@ public class ServerController {
     }
 
     @GetMapping("/servers/{id}/detail-stats")
-    public Mono<StatsMessageResponse> detailStats(@PathVariable("id") UUID serverId) {
+    public Mono<StatsDto> detailStats(@PathVariable("id") UUID serverId) {
         return serverService.detailStats(serverId);
     }
 

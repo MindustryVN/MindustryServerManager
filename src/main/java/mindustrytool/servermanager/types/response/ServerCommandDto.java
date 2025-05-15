@@ -1,4 +1,4 @@
-package mindustrytool.servermanager.messages.response;
+package mindustrytool.servermanager.types.response;
 
 import java.util.List;
 

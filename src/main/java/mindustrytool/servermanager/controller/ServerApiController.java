@@ -15,11 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import mindustrytool.servermanager.filter.ServerFilter;
-import mindustrytool.servermanager.messages.request.PlayerMessageRequest;
-import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
-import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
 import mindustrytool.servermanager.service.ServerService;
-import mindustrytool.servermanager.types.request.BuildLog;
+import mindustrytool.servermanager.types.response.ApiServerDto;
+import mindustrytool.servermanager.types.response.BuildLogDto;
+import mindustrytool.servermanager.types.response.MindustryPlayerDto;
+import mindustrytool.servermanager.types.response.PlayerDto;
 import reactor.core.publisher.Mono;
 
 @RestController
@@ -30,7 +30,7 @@ public class ServerApiController {
     private final ServerService serverService;
 
     @PostMapping(value = "players", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<SetPlayerMessageRequest> setPlayer(@RequestBody PlayerMessageRequest payload) {
+    public Mono<MindustryPlayerDto> setPlayer(@RequestBody PlayerDto payload) {
         return ServerFilter.getContext()
                 .flatMap(server -> server.getBackend()//
                         .setPlayer(payload)//
@@ -40,13 +40,13 @@ public class ServerApiController {
     }
 
     @PostMapping(value = "players/leave", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<Void> onPlayerLeave(@RequestBody PlayerMessageRequest payload) {
+    public Mono<Void> onPlayerLeave(@RequestBody PlayerDto payload) {
         return ServerFilter.getContext().flatMap(
                 server -> serverService.stats(server.getId()).flatMap(stats -> server.getBackend().setStats(stats)));
     }
 
     @PostMapping(value = "build-log", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public Mono<Void> logBuild(@RequestBody ArrayList<BuildLog> payload) {
+    public Mono<Void> logBuild(@RequestBody ArrayList<BuildLogDto> payload) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().sendBuildLog(payload));
     }
 
@@ -72,7 +72,7 @@ public class ServerApiController {
     }
 
     @GetMapping("servers")
-    public Mono<GetServersMessageResponse> getServers(@RequestParam("page") int page, @RequestParam("size") int size) {
+    public Mono<ApiServerDto> getServers(@RequestParam("page") int page, @RequestParam("size") int size) {
         return ServerFilter.getContext().flatMap(server -> server.getBackend().getServers(page, size));
     }
 

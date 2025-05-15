@@ -17,15 +17,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
-import mindustrytool.servermanager.messages.request.PlayerMessageRequest;
-import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
-import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
-import mindustrytool.servermanager.messages.response.GetServersMessageResponse;
-import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.types.data.Player;
-import mindustrytool.servermanager.types.request.BuildLog;
+import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.response.ApiServerDto;
-import mindustrytool.servermanager.messages.response.ServerCommandDto;
+import mindustrytool.servermanager.types.response.BuildLogDto;
+import mindustrytool.servermanager.types.response.MindustryPlayerDto;
+import mindustrytool.servermanager.types.response.PlayerDto;
+import mindustrytool.servermanager.types.response.ServerCommandDto;
+import mindustrytool.servermanager.types.response.StatsDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -63,7 +62,7 @@ public class GatewayService {
                         .toString();
             }
 
-            public Mono<Void> setPlayer(SetPlayerMessageRequest request) {
+            public Mono<Void> setPlayer(MindustryPlayerDto request) {
                 return WebClient.create(serverUri("set-player"))//
                         .post()//
                         .bodyValue(request)//
@@ -92,19 +91,19 @@ public class GatewayService {
 
             }
 
-            public Mono<StatsMessageResponse> getStats() {
+            public Mono<StatsDto> getStats() {
                 return WebClient.create(serverUri("stats"))//
                         .get()//
                         .retrieve()//
-                        .bodyToMono(StatsMessageResponse.class)//
+                        .bodyToMono(StatsDto.class)//
                         .timeout(Duration.ofSeconds(5));
             }
 
-            public Mono<StatsMessageResponse> getDetailStats() {
+            public Mono<StatsDto> getDetailStats() {
                 return WebClient.create(serverUri("detail-stats"))//
                         .get()//
                         .retrieve()//
-                        .bodyToMono(StatsMessageResponse.class)//
+                        .bodyToMono(StatsDto.class)//
                         .timeout(Duration.ofSeconds(5));
             }
 
@@ -118,7 +117,7 @@ public class GatewayService {
                         .then();
             }
 
-            public Mono<Void> host(StartServerMessageRequest request) {
+            public Mono<Void> host(HostServerRequest request) {
                 return WebClient.create(serverUri("host"))//
                         .post()//
                         .bodyValue(request.setMode(request.getMode().toLowerCase()))//
@@ -158,16 +157,16 @@ public class GatewayService {
                         .build().toUriString();
             }
 
-            public Mono<SetPlayerMessageRequest> setPlayer(PlayerMessageRequest payload) {
+            public Mono<MindustryPlayerDto> setPlayer(PlayerDto payload) {
                 return WebClient.create(backendUri("servers", id.toString(), "players"))//
                         .post()//
                         .headers(this::setHeaders)//
                         .bodyValue(payload)//
                         .retrieve()//
-                        .bodyToMono(SetPlayerMessageRequest.class);
+                        .bodyToMono(MindustryPlayerDto.class);
             }
 
-            public Mono<Void> setStats(StatsMessageResponse payload) {
+            public Mono<Void> setStats(StatsDto payload) {
                 return WebClient.create(backendUri("servers", id.toString(), "stats"))//
                         .post()//
                         .headers(this::setHeaders)//
@@ -176,14 +175,14 @@ public class GatewayService {
                         .bodyToMono(Void.class);
             }
 
-            public Mono<GetServersMessageResponse> getServers(int page, int size) {
+            public Mono<ApiServerDto> getServers(int page, int size) {
                 return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
                         .get()//
                         .headers(this::setHeaders)//
                         .retrieve()//
                         .bodyToFlux(ApiServerDto.class)//
                         .collectList()//
-                        .map(server -> new GetServersMessageResponse().setServers(server));
+                        .map(server -> new ApiServerDto().setServers(server));
             }
 
             public Mono<String> host(String serverId) {
@@ -204,7 +203,7 @@ public class GatewayService {
                         .then();
             }
 
-            public Mono<Void> sendBuildLog(ArrayList<BuildLog> logs) {
+            public Mono<Void> sendBuildLog(ArrayList<BuildLogDto> logs) {
                 return WebClient.create(backendUri("servers", id.toString(), "build-log"))//
                         .post()//
                         .headers(this::setHeaders)//

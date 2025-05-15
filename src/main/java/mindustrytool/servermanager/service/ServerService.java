@@ -38,15 +38,14 @@ import lombok.extern.slf4j.Slf4j;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.types.request.HostServerRequest;
-import mindustrytool.servermanager.messages.request.SetPlayerMessageRequest;
-import mindustrytool.servermanager.messages.request.StartServerMessageRequest;
-import mindustrytool.servermanager.messages.response.StatsMessageResponse;
 import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerContainerMetadata;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
-import mindustrytool.servermanager.types.response.ServerDto;
+import mindustrytool.servermanager.types.response.MindustryPlayerDto;
+import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
+import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
 import mindustrytool.servermanager.utils.Utils;
 import reactor.core.publisher.Flux;
@@ -105,7 +104,7 @@ public class ServerService {
                     .exec(new AsyncResultCallback<>())
                     .awaitResult();
 
-            statsSnapshots.compute(id, (_, prev) -> {
+            statsSnapshots.compute(id, (_ignore, prev) -> {
                 if (prev == null)
                     return new Statistics[] { null, newStats };
                 return new Statistics[] { prev[1], newStats };
@@ -204,7 +203,7 @@ public class ServerService {
                                     return Mono.empty();
                                 })//
                                 .retry(5)//
-                                .doOnError(_ -> gatewayService.of(server.getId())//
+                                .doOnError(_ignore -> gatewayService.of(server.getId())//
                                         .getBackend()
                                         .sendConsole("Server not response, auto shutdown: " + server
                                                 .getId()))
@@ -286,7 +285,7 @@ public class ServerService {
         return Mono.empty();
     }
 
-    public Flux<ServerDto> getServers() {
+    public Flux<ServerWithStatsDto> getServers() {
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
@@ -296,17 +295,17 @@ public class ServerService {
                 .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
                 .map(server -> server.getInit())//
                 .flatMap(server -> stats(server.getId())//
-                        .map(stats -> modelMapper.map(server, ServerDto.class).setUsage(stats).setStatus(stats.status))//
-                        .onErrorResume(_ -> Mono
-                                .just(modelMapper.map(server, ServerDto.class).setUsage(new StatsMessageResponse())))//
+                        .map(stats -> modelMapper.map(server, ServerWithStatsDto.class).setUsage(stats).setStatus(stats.status))//
+                        .onErrorResume(_ignore -> Mono
+                                .just(modelMapper.map(server, ServerWithStatsDto.class).setUsage(new StatsDto())))//
                 );
     }
 
-    public Mono<ServerDto> getServer(UUID id) {
+    public Mono<ServerWithStatsDto> getServer(UUID id) {
         var container = findContainerByServerId(id);
 
         if (container == null) {
-            return Mono.just(new ServerDto().setStatus("DELETED"));
+            return Mono.just(new ServerWithStatsDto().setStatus("DELETED"));
         }
 
         var containerStats = stats.get(id);
@@ -314,7 +313,7 @@ public class ServerService {
 
         return stats(id)//
                 .map(stats -> {
-                    var dto = modelMapper.map(metadata.getInit(), ServerDto.class);
+                    var dto = modelMapper.map(metadata.getInit(), ServerWithStatsDto.class);
                     if (containerStats != null) {
                         stats.setCpuUsage(containerStats.cpuUsage())//
                                 .setTotalRam(containerStats.totalRam())//
@@ -328,7 +327,7 @@ public class ServerService {
         return gatewayService.of(id).getServer()//
                 .getPlayers()//
                 .doOnError(error -> log.error("Failed to get players", error))//
-                .onErrorResume(_ -> Flux.empty());
+                .onErrorResume(_ignore -> Flux.empty());
     }
 
     private Optional<ServerContainerMetadata> readMetadataFromContainer(Container container) {
@@ -638,9 +637,9 @@ public class ServerService {
             return gateway.getServer()//
                     .sendCommand(preHostCommand)//
                     .then(gateway.getServer()
-                            .host(new StartServerMessageRequest()// \
+                            .host(new HostServerRequest()// \
                                     .setMode(request.getMode())
-                                    .setCommands(request.getHostCommand())))//
+                                    .setHostCommand(request.getHostCommand())))//
                     .then(waitForHosting(gateway));
         });
     }
@@ -658,7 +657,7 @@ public class ServerService {
         return gatewayService.of(serverId).getServer().ok();
     }
 
-    public Mono<StatsMessageResponse> stats(UUID serverId) {
+    public Mono<StatsDto> stats(UUID serverId) {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
@@ -680,7 +679,7 @@ public class ServerService {
                 .onErrorReturn(getStatIfError(serverId));
     }
 
-    public Mono<StatsMessageResponse> detailStats(UUID serverId) {
+    public Mono<StatsDto> detailStats(UUID serverId) {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getDetailStats()//
@@ -704,7 +703,7 @@ public class ServerService {
 
     }
 
-    private StatsMessageResponse getStatIfError(UUID serverId) {
+    private StatsDto getStatIfError(UUID serverId) {
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
@@ -718,7 +717,7 @@ public class ServerService {
                                 ? "NOT_RESPONSE"
                                 : "DOWN";
 
-        var response = new StatsMessageResponse()
+        var response = new StatsDto()
                 .setRamUsage(0)
                 .setTotalRam(0)
                 .setPlayers(0)
@@ -729,7 +728,7 @@ public class ServerService {
         return response;
     }
 
-    public Mono<Void> setPlayer(UUID serverId, SetPlayerMessageRequest payload) {
+    public Mono<Void> setPlayer(UUID serverId, MindustryPlayerDto payload) {
         return gatewayService.of(serverId).getServer().setPlayer(payload);
     }
 
