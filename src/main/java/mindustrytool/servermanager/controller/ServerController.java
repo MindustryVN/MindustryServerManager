@@ -34,7 +34,9 @@ import mindustrytool.servermanager.service.ServerService;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.HostServerRequest;
+import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
+import mindustrytool.servermanager.types.response.ModDto;
 import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
@@ -159,5 +161,15 @@ public class ServerController {
             @RequestPart("value") String value//
     ) {
         return serverService.setConfig(serverId, key, value);
+    }
+
+    @GetMapping("servers/{id}/mods")
+    public Flux<ModDto> getMods(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getMods();
+    }
+
+    @GetMapping("servers/{id}/maps")
+    public Flux<MapDto> getMaps(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getMaps();
     }
 }
