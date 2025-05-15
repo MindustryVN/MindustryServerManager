@@ -33,8 +33,17 @@ import com.github.dockerjava.api.model.Statistics;
 import com.github.dockerjava.api.model.Volume;
 import com.github.dockerjava.core.InvocationBuilder.AsyncResultCallback;
 
+import arc.files.Fi;
+import arc.files.ZipFi;
+import arc.struct.StringMap;
+import arc.util.serialization.Json;
+import arc.util.serialization.Jval;
+import arc.util.serialization.Jval.Jformat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import mindustry.core.Version;
+import mindustry.io.MapIO;
+import mindustry.mod.Mods.ModMeta;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.types.request.HostServerRequest;
@@ -42,7 +51,10 @@ import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerContainerMetadata;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
+import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
+import mindustrytool.servermanager.types.response.ModDto;
+import mindustrytool.servermanager.types.response.ModDto.ModMetaDto;
 import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
 import mindustrytool.servermanager.types.response.StatsDto;
@@ -65,7 +77,8 @@ public class ServerService {
 
     private final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
-
+    private final Json json = new Json();
+    
     private final Long MAX_FILE_SIZE = 5000000l;
 
     private record ContainerStats(
@@ -295,7 +308,8 @@ public class ServerService {
                 .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
                 .map(server -> server.getInit())//
                 .flatMap(server -> stats(server.getId())//
-                        .map(stats -> modelMapper.map(server, ServerWithStatsDto.class).setUsage(stats).setStatus(stats.status))//
+                        .map(stats -> modelMapper.map(server, ServerWithStatsDto.class).setUsage(stats)
+                                .setStatus(stats.status))//
                         .onErrorResume(_ignore -> Mono
                                 .just(modelMapper.map(server, ServerWithStatsDto.class).setUsage(new StatsDto())))//
                 );
@@ -530,6 +544,105 @@ public class ServerService {
     public File getFile(UUID serverId, String path) {
         return Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toFile();
 
+    }
+
+    public Flux<MapDto> getMaps(UUID serverId) {
+        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "maps").toFile();
+
+        var maps = new Fi(folder).findAll()
+                .map(file -> {
+                    try {
+                        return MapIO.createMap(file, true);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return new mindustry.maps.Map(file, 0, 0, new StringMap(), true, 0, Version.build);
+                    }
+                }).map(map -> new MapDto()//
+                        .setName(map.name())//
+                        .setFilename(map.file.name())
+                        .setCustom(map.custom)
+                        .setHeight(map.height)
+                        .setWidth(map.width))
+                .list();
+
+        return Flux.fromIterable(maps);
+    }
+
+    public Flux<ModDto> getMods(UUID serverId) {
+        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "maps").toFile();
+        var modFiles = new Fi(folder).findAll();
+
+        var result = new ArrayList<ModDto>();
+        for (var modFile : modFiles) {
+            try {
+                var mod = loadMod(modFile);
+                result.add(mod);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return Flux.fromIterable(result);
+    }
+
+    private ModMeta findMeta(Fi file) {
+        Fi metaFile = null;
+
+        var metaFiles = List.of("mod.json", "mod.hjson", "plugin.json", "plugin.hjson");
+        for (String name : metaFiles) {
+            if ((metaFile = file.child(name)).exists()) {
+                break;
+            }
+        }
+
+        if (!metaFile.exists()) {
+            return null;
+        }
+
+        ModMeta meta = json.fromJson(ModMeta.class, Jval.read(metaFile.readString()).toString(Jformat.plain));
+        meta.cleanup();
+        return meta;
+    }
+
+    private ModDto loadMod(Fi sourceFile) throws Exception {
+        ZipFi rootZip = null;
+
+        try {
+            Fi zip = sourceFile.isDirectory() ? sourceFile : (rootZip = new ZipFi(sourceFile));
+            if (zip.list().length == 1 && zip.list()[0].isDirectory()) {
+                zip = zip.list()[0];
+            }
+
+            ModMeta meta = findMeta(zip);
+
+            if (meta == null) {
+                log.warn("Mod @ doesn't have a '[mod/plugin].[h]json' file, skipping.", zip);
+                throw new ApiError(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid file: No mod.json found.");
+            }
+
+            return new ModDto()//
+                    .setFilename(zip.name())//
+                    .setName(meta.name)
+                    .setMeta(new ModMetaDto()//
+                            .setAuthor(meta.author)//
+                            .setDependencies(meta.dependencies.list())
+                            .setDescription(meta.description)
+                            .setDisplayName(meta.displayName)
+                            .setHidden(meta.hidden)
+                            .setInternalName(meta.internalName)
+                            .setJava(meta.java)
+                            .setMain(meta.main)
+                            .setMinGameVersion(meta.minGameVersion)
+                            .setName(meta.name)
+                            .setRepo(meta.repo)
+                            .setSubtitle(meta.subtitle)
+                            .setVersion(meta.version));
+        } catch (Exception e) {
+            // delete root zip file so it can be closed on windows
+            if (rootZip != null)
+                rootZip.delete();
+            throw e;
+        }
     }
 
     public Flux<ServerFileDto> getFiles(UUID serverId, String path) {

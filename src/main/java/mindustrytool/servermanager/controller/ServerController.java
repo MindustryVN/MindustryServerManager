@@ -165,12 +165,12 @@ public class ServerController {
 
     @GetMapping("servers/{id}/mods")
     public Flux<ModDto> getMods(@PathVariable("id") UUID serverId) {
-        return gatewayService.of(serverId).getServer().getMods();
+        return serverService.getMods(serverId);
     }
 
     @GetMapping("servers/{id}/maps")
     public Flux<MapDto> getMaps(@PathVariable("id") UUID serverId) {
-        return gatewayService.of(serverId).getServer().getMaps();
+        return serverService.getMaps(serverId);
     }
 
     @GetMapping("servers/{id}/plugin-version")

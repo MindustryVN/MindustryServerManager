@@ -21,9 +21,7 @@ import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.response.ApiServerDto;
 import mindustrytool.servermanager.types.response.BuildLogDto;
-import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
-import mindustrytool.servermanager.types.response.ModDto;
 import mindustrytool.servermanager.types.response.PlayerDto;
 import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.StatsDto;
@@ -152,20 +150,6 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToFlux(ServerCommandDto.class)//
                         .timeout(Duration.ofSeconds(10));
-            }
-
-            public Flux<ModDto> getMods() {
-                return WebClient.create(serverUri("mods"))//
-                        .get()//
-                        .retrieve()//
-                        .bodyToFlux(ModDto.class);
-            }
-
-            public Flux<MapDto> getMaps() {
-                return WebClient.create(serverUri("maps"))//
-                        .get()//
-                        .retrieve()//
-                        .bodyToFlux(MapDto.class);
             }
         }
 

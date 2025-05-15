@@ -14,7 +14,7 @@ public class ModDto {
 
     @Data
     @Accessors(chain = true)
-    public class ModMetaDto {
+    public static class ModMetaDto {
         private String name;
         private String internalName;
         private String minGameVersion = "0";
