@@ -64,6 +64,14 @@ public class GatewayService {
                         .toString();
             }
 
+            public Mono<String> getPluginVersion() {
+                return WebClient.create(serverUri("plugin-version"))//
+                        .get()//
+                        .retrieve()//
+                        .bodyToMono(String.class)//
+                        .timeout(Duration.ofSeconds(5));
+            }
+
             public Mono<Void> setPlayer(MindustryPlayerDto request) {
                 return WebClient.create(serverUri("set-player"))//
                         .post()//

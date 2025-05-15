@@ -172,4 +172,15 @@ public class ServerController {
     public Flux<MapDto> getMaps(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getMaps();
     }
+
+    @GetMapping("servers/{id}/plugin-version")
+    public Mono<String> getPluginVersion(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getPluginVersion();
+    }
+
+    @GetMapping("servers/{id}/manager-version")
+    public String getManagerVersion() {
+        return Config.MANAGER_VERSION;
+    }
+
 }

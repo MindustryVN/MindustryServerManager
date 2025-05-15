@@ -41,6 +41,8 @@ public class Config implements WebFluxConfigurer {
     public static String serverIdLabel = "com.mindustry-tool.server.id";
     public static File volumeFolder = new File(volumeFolderPath);
 
+    public static final String MANAGER_VERSION = "0.0.1";
+
     @PostConstruct
     public void init() {
         volumeFolder.mkdirs();
