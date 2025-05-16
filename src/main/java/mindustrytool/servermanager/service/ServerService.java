@@ -621,7 +621,7 @@ public class ServerService {
             }
 
             return new ModDto()//
-                    .setFilename(zip.file().getName())//
+                    .setFilename(sourceFile.name())//
                     .setName(meta.name)
                     .setMeta(new ModMetaDto()//
                             .setAuthor(meta.author)//
