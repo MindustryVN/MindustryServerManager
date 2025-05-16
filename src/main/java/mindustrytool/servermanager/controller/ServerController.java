@@ -120,7 +120,8 @@ public class ServerController {
 
     @PostMapping("/servers/{id}/host-from-server")
     public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId,
-            @Validated @RequestBody HostFromSeverRequest request) {
+            @Validated @RequestBody HostFromSeverRequest request//
+    ) {
         return serverService.hostFromServer(serverId, request).subscribeOn(Config.QUEUE_SCHEDULER);
     }
 
