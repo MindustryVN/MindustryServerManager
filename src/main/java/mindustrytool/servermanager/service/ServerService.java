@@ -569,7 +569,7 @@ public class ServerService {
     }
 
     public Flux<ModDto> getMods(UUID serverId) {
-        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "maps").toFile();
+        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "mods").toFile();
         var modFiles = new Fi(folder).findAll();
 
         var result = new ArrayList<ModDto>();
