@@ -679,6 +679,28 @@ public class ServerService {
             folder.mkdirs();
         }
 
+        if (folder.getPath().endsWith("mods")) {
+            // Remove all old mods if exists
+            var parts = path.replace(".jar", "").split("_");
+            if (parts.length == 2) {
+                try {
+                    var id = UUID.fromString(parts[1]);
+                    new Fi(folder)//
+                            .findAll()//
+                            .select(f -> f.name().startsWith(id.toString()))//
+                            .each(f -> {
+                                gatewayService.of(serverId)//
+                                        .getBackend()
+                                        .sendConsole("Delete old plugin/mod: " + f.name())
+                                        .subscribe();
+                                f.delete();
+                            });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         File file = new File(folder, filePart.filename());
 
         try {
