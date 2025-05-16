@@ -525,7 +525,7 @@ public class ServerService {
                         .withNetworkMode("mindustry-server")//
                         .withMemory(524288000l)
                         .withCpuPeriod(100_000L)
-                        .withCpuQuota(70_000L)
+                        .withCpuQuota(100_000L)
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
