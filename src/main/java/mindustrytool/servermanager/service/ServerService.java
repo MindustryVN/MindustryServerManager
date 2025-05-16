@@ -78,7 +78,7 @@ public class ServerService {
     private final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
     private final Json json = new Json();
-    
+
     private final Long MAX_FILE_SIZE = 5000000l;
 
     private record ContainerStats(
@@ -621,7 +621,7 @@ public class ServerService {
             }
 
             return new ModDto()//
-                    .setFilename(zip.name())//
+                    .setFilename(zip.file().getName())//
                     .setName(meta.name)
                     .setMeta(new ModMetaDto()//
                             .setAuthor(meta.author)//
