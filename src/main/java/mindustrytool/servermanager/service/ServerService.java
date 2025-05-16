@@ -641,7 +641,7 @@ public class ServerService {
             // delete root zip file so it can be closed on windows
             if (rootZip != null)
                 rootZip.delete();
-            throw e;
+            throw new RuntimeException("Can not load mod from: " + sourceFile.name(), e);
         }
     }
 
