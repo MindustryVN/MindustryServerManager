@@ -11,4 +11,5 @@ public class Player {
     private String ip;
     private Team team;
     private String locale;
+    private boolean isAdmin;
 }
