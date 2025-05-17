@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.yaml.snakeyaml.util.UriEncoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -542,12 +543,13 @@ public class ServerService {
     }
 
     public File getFile(UUID serverId, String path) {
-        return Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toFile();
+        return Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", UriEncoder.decode(path))
+                .toFile();
 
     }
 
     public Flux<MapDto> getMaps(UUID serverId) {
-        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "maps").toFile();
+        var folder = getFile(serverId, "maps");
 
         var maps = new Fi(folder).findAll()
                 .map(file -> {
@@ -569,7 +571,7 @@ public class ServerService {
     }
 
     public Flux<ModDto> getMods(UUID serverId) {
-        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", "mods").toFile();
+        var folder = getFile(serverId, "mods");
         var modFiles = new Fi(folder).findAll();
 
         var result = new ArrayList<ModDto>();
@@ -646,7 +648,7 @@ public class ServerService {
     }
 
     public Flux<ServerFileDto> getFiles(UUID serverId, String path) {
-        var folder = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toFile();
+        var folder = getFile(serverId, path);
 
         return Mono.just(folder) //
                 .filter(file -> file.length() < MAX_FILE_SIZE)//
@@ -671,15 +673,13 @@ public class ServerService {
     }
 
     public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {
-        var folderPath = Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path);
-
-        File folder = new File(folderPath.toUri());
+        var folder = getFile(serverId, path);
 
         if (!folder.exists()) {
             folder.mkdirs();
         }
 
-        if (folder.getPath().endsWith("mods")) {
+        if (folder.getPath().contains("config/mods")) {
             // Remove all old mods if exists
             var parts = path.replace(".jar", "").split("_");
             if (parts.length == 2) {
@@ -715,8 +715,7 @@ public class ServerService {
     }
 
     public Mono<Void> deleteFile(UUID serverId, String path) {
-        var file = new File(
-                Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", path).toString());
+        var file = getFile(serverId, path);
 
         if (!file.exists()) {
             log.info("Delete file: " + path + " is not exists");
