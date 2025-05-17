@@ -16,5 +16,6 @@ public class StatsDto {
     public String mapName = "";
     public byte[] mapData;
     public List<String> mods = new ArrayList<>();
+    public int kicks;
     public String status = "UNSET";
 }
