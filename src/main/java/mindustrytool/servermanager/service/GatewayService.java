@@ -163,7 +163,7 @@ public class GatewayService {
                         .timeout(Duration.ofSeconds(10));
             }
 
-            public Flux<PlayerInfoDto> getPlayers(int page, int size, boolean banned) {
+            public Flux<PlayerInfoDto> getPlayers(int page, int size, Boolean banned) {
                 return WebClient.create(serverUri("player-infos")//
                         .queryParam("page", page)
                         .queryParam("size", size)
