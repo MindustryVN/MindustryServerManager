@@ -2,6 +2,8 @@ package mindustrytool.servermanager.service;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -19,7 +21,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.yaml.snakeyaml.util.UriEncoder;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -543,7 +544,9 @@ public class ServerService {
     }
 
     public File getFile(UUID serverId, String path) {
-        return Paths.get(Config.volumeFolderPath, "servers", serverId.toString(), "config", UriEncoder.decode(path))
+        return Paths
+                .get(Config.volumeFolderPath, "servers", serverId.toString(), "config",
+                        URLDecoder.decode(path, StandardCharsets.UTF_8))
                 .toFile();
 
     }
