@@ -27,7 +27,7 @@ public class RequestFilter implements WebFilter {
         return chain.filter(exchange)//
                 .doOnTerminate(() -> {
                     var request = exchange.getRequest();
-                    String requestUrl = request.getURI().getPath().toString();
+                    String requestUrl = request.getURI().toString();
                     var status = exchange.getResponse().getStatusCode();
                     var method = request.getMethod();
                     var duration = Duration.between(start, Instant.now()).toMillis();
