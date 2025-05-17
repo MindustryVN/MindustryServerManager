@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.core.io.InputStreamResource;
@@ -34,9 +35,11 @@ import mindustrytool.servermanager.service.ServerService;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.HostServerRequest;
+import mindustrytool.servermanager.types.request.PaginationRequest;
 import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.ModDto;
+import mindustrytool.servermanager.types.response.PlayerInfoDto;
 import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
@@ -177,6 +180,20 @@ public class ServerController {
     @GetMapping("servers/{id}/plugin-version")
     public Mono<String> getPluginVersion(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getPluginVersion();
+    }
+
+    @GetMapping("servers/{id}/kicks")
+    public Mono<Map<String, Long>> getKicks(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getKickedIps();
+    }
+
+    @GetMapping("servers/{id}/player-infos")
+    public Flux<PlayerInfoDto> getPlayerInfos(//
+            @PathVariable("id") UUID serverId, //
+            @Validated PaginationRequest request,
+            @RequestParam("banned") Boolean banned//
+    ) {
+        return gatewayService.of(serverId).getServer().getPlayers(request.getPage(), request.getSize(), banned);
     }
 
     @GetMapping("servers/{id}/manager-version")

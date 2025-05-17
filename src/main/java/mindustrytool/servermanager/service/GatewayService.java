@@ -3,8 +3,10 @@ package mindustrytool.servermanager.service;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.UUID;
 
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -23,6 +25,7 @@ import mindustrytool.servermanager.types.response.ApiServerDto;
 import mindustrytool.servermanager.types.response.BuildLogDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.PlayerDto;
+import mindustrytool.servermanager.types.response.PlayerInfoDto;
 import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import reactor.core.publisher.Flux;
@@ -55,15 +58,16 @@ public class GatewayService {
 
         public class Server {
             @JsonIgnore
-            public String serverUri(String... resource) {
-                return URI.create(
-                        (Config.IS_DEVELOPMENT ? "http://localhost:9999/" : "http://" + id.toString() + ":9999/")
-                                + String.join("/", resource))
-                        .toString();
+            public UriComponentsBuilder serverUri(String... resource) {
+                return UriComponentsBuilder.fromUri(URI.create(
+                        Config.IS_DEVELOPMENT//
+                                ? "http://localhost:9999/" //
+                                : "http://" + id.toString() + ":9999/"))
+                        .pathSegment(resource);
             }
 
             public Mono<String> getPluginVersion() {
-                return WebClient.create(serverUri("plugin-version"))//
+                return WebClient.create(serverUri("plugin-version").toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -71,7 +75,7 @@ public class GatewayService {
             }
 
             public Mono<Void> setPlayer(MindustryPlayerDto request) {
-                return WebClient.create(serverUri("set-player"))//
+                return WebClient.create(serverUri("set-player").toUriString())//
                         .post()//
                         .bodyValue(request)//
                         .retrieve()//
@@ -81,7 +85,7 @@ public class GatewayService {
             }
 
             public Flux<Player> getPlayers() {
-                return WebClient.create(serverUri("players"))//
+                return WebClient.create(serverUri("players").toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToFlux(Player.class)//
@@ -89,7 +93,8 @@ public class GatewayService {
             }
 
             public Mono<Void> ok() {
-                return WebClient.create(serverUri("ok"))//
+                return WebClient.create(serverUri("ok")
+                        .toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -100,7 +105,8 @@ public class GatewayService {
             }
 
             public Mono<StatsDto> getStats() {
-                return WebClient.create(serverUri("stats"))//
+                return WebClient.create(serverUri("stats")
+                        .toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
@@ -108,7 +114,8 @@ public class GatewayService {
             }
 
             public Mono<StatsDto> getDetailStats() {
-                return WebClient.create(serverUri("detail-stats"))//
+                return WebClient.create(serverUri("detail-stats")
+                        .toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
@@ -116,7 +123,8 @@ public class GatewayService {
             }
 
             public Mono<Void> sendCommand(String... command) {
-                return WebClient.create(serverUri("commands"))//
+                return WebClient.create(serverUri("commands")
+                        .toUriString())//
                         .post()//
                         .bodyValue(command)//
                         .retrieve()//
@@ -126,7 +134,8 @@ public class GatewayService {
             }
 
             public Mono<Void> host(HostServerRequest request) {
-                return WebClient.create(serverUri("host"))//
+                return WebClient.create(serverUri("host")
+                        .toUriString())//
                         .post()//
                         .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                         .retrieve()//
@@ -136,7 +145,8 @@ public class GatewayService {
             }
 
             public Mono<Boolean> isHosting() {
-                return WebClient.create(serverUri("hosting"))//
+                return WebClient.create(serverUri("hosting")
+                        .toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToMono(Boolean.class)//
@@ -145,10 +155,33 @@ public class GatewayService {
             }
 
             public Flux<ServerCommandDto> getCommands() {
-                return WebClient.create(serverUri("commands"))//
+                return WebClient.create(serverUri("commands")
+                        .toUriString())//
                         .get()//
                         .retrieve()//
                         .bodyToFlux(ServerCommandDto.class)//
+                        .timeout(Duration.ofSeconds(10));
+            }
+
+            public Flux<PlayerInfoDto> getPlayers(int page, int size, boolean banned) {
+                return WebClient.create(serverUri("player-infos")//
+                        .queryParam("page", page)
+                        .queryParam("size", size)
+                        .queryParam("banned", banned)//
+                        .toUriString())//
+                        .get()//
+                        .retrieve()//
+                        .bodyToFlux(PlayerInfoDto.class)//
+                        .timeout(Duration.ofSeconds(10));
+            }
+
+            public Mono<Map<String, Long>> getKickedIps() {
+                return WebClient.create(serverUri("kicks")
+                        .toUriString())//
+                        .get()//
+                        .retrieve()//
+                        .bodyToMono(new ParameterizedTypeReference<Map<String, Long>>() {
+                        })//
                         .timeout(Duration.ofSeconds(10));
             }
         }
