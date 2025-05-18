@@ -796,23 +796,19 @@ public class ServerService {
     }
 
     public Mono<StatsDto> stats(UUID serverId) {
+        var container = findContainerByServerId(serverId);
+
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
-                .defaultIfEmpty(new StatsDto())
+                .defaultIfEmpty(new StatsDto().setStatus(container == null //
+                        ? "DELETED"
+                        : container//
+                                .getState()//
+                                .equalsIgnoreCase("running")//
+                                        ? "NOT_RESPONSE"
+                                        : "DOWN"))
                 .map(serverStats -> {
-                    var container = findContainerByServerId(serverId);
-
-                    var status = container == null //
-                            ? "DELETED"
-                            : container//
-                                    .getState()//
-                                    .equalsIgnoreCase("running")//
-                                            ? "NOT_RESPONSE"
-                                            : "DOWN";
-
-                    serverStats.setStatus(status);
-
                     if (container == null) {
                         return serverStats;
                     }
@@ -828,22 +824,19 @@ public class ServerService {
     }
 
     public Mono<StatsDto> detailStats(UUID serverId) {
+        var container = findContainerByServerId(serverId);
+
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getDetailStats()//
-                .defaultIfEmpty(new StatsDto())
+                .defaultIfEmpty(new StatsDto().setStatus(container == null //
+                        ? "DELETED"
+                        : container//
+                                .getState()//
+                                .equalsIgnoreCase("running")//
+                                        ? "NOT_RESPONSE"
+                                        : "DOWN"))
                 .map(serverStats -> {
-                    var container = findContainerByServerId(serverId);
-
-                    var status = container == null //
-                            ? "DELETED"
-                            : container//
-                                    .getState()//
-                                    .equalsIgnoreCase("running")//
-                                            ? "NOT_RESPONSE"
-                                            : "DOWN";
-
-                    serverStats.setStatus(status);
 
                     if (container == null) {
                         return serverStats;
