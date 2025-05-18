@@ -220,7 +220,7 @@ public class GatewayService {
 
             public Mono<MindustryPlayerDto> setPlayer(PlayerDto payload) {
                 return webClient.method(HttpMethod.POST)
-                        .uri("servers", id.toString(), "players")//
+                        .uri("servers/" + id.toString() + "/players")//
                         .bodyValue(payload)//
                         .retrieve()//
                         .bodyToMono(MindustryPlayerDto.class);
@@ -228,14 +228,15 @@ public class GatewayService {
 
             public Mono<Void> setStats(StatsDto payload) {
                 return webClient.method(HttpMethod.POST)
-                        .uri("servers", id.toString(), "stats")//
+                        .uri("servers/" + id.toString() + "/stats")//
                         .bodyValue(payload)//
                         .retrieve()//
                         .bodyToMono(Void.class);
             }
 
             public Mono<ApiServerDto> getServers(int page, int size) {
-                return webClient.method(HttpMethod.GET).uri("servers?page=%s&size=%s".formatted(page, size))//
+                return webClient.method(HttpMethod.GET)//
+                        .uri("servers?page=%s&size=%s".formatted(page, size))//
                         .retrieve()//
                         .bodyToFlux(ApiServerDto.class)//
                         .collectList()//
@@ -244,14 +245,14 @@ public class GatewayService {
 
             public Mono<String> host(String serverId) {
                 return webClient.method(HttpMethod.POST)
-                        .uri("servers", serverId, "host-from-server")//
+                        .uri("servers/" + serverId + "host-from-server")//
                         .retrieve()//
                         .bodyToMono(String.class);
             }
 
             public Mono<Void> sendChat(String chat) {
                 return webClient.method(HttpMethod.POST)
-                        .uri("servers", id.toString(), "chat")//
+                        .uri("servers/" + id.toString() + "/chat")//
                         .bodyValue(chat)//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -260,7 +261,7 @@ public class GatewayService {
 
             public Mono<Void> sendBuildLog(ArrayList<BuildLogDto> logs) {
                 return webClient.method(HttpMethod.POST)//
-                        .uri("servers", id.toString(), "build-log")//
+                        .uri("servers/" + id.toString() + "/build-log")//
                         .bodyValue(logs)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
@@ -270,7 +271,7 @@ public class GatewayService {
 
             public Mono<Void> sendConsole(String console) {
                 return webClient.method(HttpMethod.POST)
-                        .uri("servers", id.toString(), "console")//
+                        .uri("servers/" + id.toString() + "/console")//
                         .bodyValue(console)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
@@ -280,7 +281,7 @@ public class GatewayService {
 
             public Mono<String> translate(String text, String targetLanguage) {
                 return webClient.method(HttpMethod.POST)//
-                        .uri("servers", "translate", targetLanguage)//
+                        .uri("servers/translate/" + targetLanguage)//
                         .bodyValue(text)//
                         .retrieve()//
                         .bodyToMono(String.class);
