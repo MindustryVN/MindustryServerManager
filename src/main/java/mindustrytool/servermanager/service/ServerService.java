@@ -799,8 +799,19 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
+                .defaultIfEmpty(new StatsDto())
                 .map(serverStats -> {
                     var container = findContainerByServerId(serverId);
+
+                    var status = container == null //
+                            ? "DELETED"
+                            : container//
+                                    .getState()//
+                                    .equalsIgnoreCase("running")//
+                                            ? "NOT_RESPONSE"
+                                            : "DOWN";
+
+                    serverStats.setStatus(status);
 
                     if (container == null) {
                         return serverStats;
@@ -813,16 +824,26 @@ public class ServerService {
                     }
 
                     return serverStats;
-                })
-                .onErrorReturn(getStatIfError(serverId));
+                });
     }
 
     public Mono<StatsDto> detailStats(UUID serverId) {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getDetailStats()//
+                .defaultIfEmpty(new StatsDto())
                 .map(serverStats -> {
                     var container = findContainerByServerId(serverId);
+
+                    var status = container == null //
+                            ? "DELETED"
+                            : container//
+                                    .getState()//
+                                    .equalsIgnoreCase("running")//
+                                            ? "NOT_RESPONSE"
+                                            : "DOWN";
+
+                    serverStats.setStatus(status);
 
                     if (container == null) {
                         return serverStats;
@@ -836,34 +857,8 @@ public class ServerService {
                     }
 
                     return serverStats;
-                })
-                .onErrorReturn(getStatIfError(serverId));
+                });
 
-    }
-
-    private StatsDto getStatIfError(UUID serverId) {
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(Map.of(Config.serverIdLabel, serverId.toString()))//
-                .exec();
-
-        var status = containers.isEmpty() //
-                ? "DELETED"
-                : containers.get(0)//
-                        .getState()//
-                        .equalsIgnoreCase("running")//
-                                ? "NOT_RESPONSE"
-                                : "DOWN";
-
-        var response = new StatsDto()
-                .setRamUsage(0)
-                .setTotalRam(0)
-                .setPlayers(0)
-                .setMapName("")
-                .setMods(new ArrayList<>())
-                .setStatus(status);
-
-        return response;
     }
 
     public Mono<Void> setPlayer(UUID serverId, MindustryPlayerDto payload) {
