@@ -13,6 +13,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -182,6 +183,15 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(new ParameterizedTypeReference<Map<String, Long>>() {
                         })//
+                        .timeout(Duration.ofSeconds(10));
+            }
+
+            public Mono<JsonNode> getRoutes() {
+                return WebClient.create(serverUri("routes")
+                        .toUriString())//
+                        .get()//
+                        .retrieve()//
+                        .bodyToMono(JsonNode.class)//
                         .timeout(Duration.ofSeconds(10));
             }
         }
