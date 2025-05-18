@@ -21,7 +21,7 @@ import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
 
 @Component
-@Order(500)
+@Order(200)
 @Slf4j
 @RequiredArgsConstructor
 public class SecurityFilter implements WebFilter {
@@ -51,7 +51,6 @@ public class SecurityFilter implements WebFilter {
         return Context.of(CONTEXT_KEY, request);
     }
 
-    @SuppressWarnings("null")
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         String uri = exchange.getRequest().getURI().getPath();
