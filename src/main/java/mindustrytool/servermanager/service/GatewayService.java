@@ -180,7 +180,7 @@ public class GatewayService {
 
             public Flux<PlayerInfoDto> getPlayers(int page, int size, Boolean banned) {
                 return webClient.method(HttpMethod.GET)
-                        .uri(builder -> builder.pathSegment("player-infos")//
+                        .uri(builder -> builder.path("player-infos")//
                                 .queryParam("page", page)
                                 .queryParam("size", size)
                                 .queryParam("banned", banned)//
