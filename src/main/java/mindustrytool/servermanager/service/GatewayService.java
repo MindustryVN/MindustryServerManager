@@ -210,7 +210,7 @@ public class GatewayService {
 
         public class Backend {
             private final WebClient webClient = WebClient.builder()
-                    .baseUrl(URI.create(envConfig.serverConfig().serverUrl()).resolve("api/v3/").toString())
+                    .baseUrl(URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/").toString())
                     .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
                     .defaultHeaders(headers -> {
                         headers.setBearerAuth("Bearer " + envConfig.serverConfig().accessToken());
