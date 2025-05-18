@@ -53,10 +53,18 @@ public class GatewayService {
         private final EnvConfig envConfig;
 
         @Getter
-        private final Backend backend = new Backend();
+        private final Backend backend;
 
         @Getter
-        private final Server server = new Server();
+        private final Server server;
+
+        public GatewayClient(UUID id, EnvConfig envConfig) {
+            this.id = id;
+            this.envConfig = envConfig;
+
+            this.backend = new Backend();
+            this.server = new Server();
+        }
 
         private static boolean handleStatus(HttpStatusCode status) {
             return switch (HttpStatus.valueOf(status.value())) {
