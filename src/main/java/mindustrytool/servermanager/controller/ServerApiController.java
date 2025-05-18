@@ -51,9 +51,9 @@ public class ServerApiController {
     }
 
     @GetMapping("total-player")
-    public Mono<Integer> getTotalPlayer() {
+    public Mono<Long> getTotalPlayer() {
         return serverService.getTotalPlayers()//
-                .onErrorReturn(0);
+                .onErrorReturn(0L);
     }
 
     @PostMapping("chat")

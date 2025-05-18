@@ -7,12 +7,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.Getter;
@@ -29,6 +29,7 @@ import mindustrytool.servermanager.types.response.PlayerDto;
 import mindustrytool.servermanager.types.response.PlayerInfoDto;
 import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.StatsDto;
+import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -57,27 +58,39 @@ public class GatewayService {
         @Getter
         private final Server server = new Server();
 
+        private static boolean handleStatus(HttpStatusCode status) {
+            return switch (HttpStatus.valueOf(status.value())) {
+                case BAD_REQUEST, NOT_FOUND, UNPROCESSABLE_ENTITY, CONFLICT -> true;
+                default -> false;
+            };
+        }
+
+        private static Mono<Throwable> createError(ClientResponse response) {
+            return response.bodyToMono(String.class)
+                    .map(message -> new ApiError(HttpStatus.valueOf(response.statusCode().value()), message));
+        }
+
         public class Server {
-            @JsonIgnore
-            public UriComponentsBuilder serverUri(String... resource) {
-                return UriComponentsBuilder.fromUri(URI.create(
-                        Config.IS_DEVELOPMENT//
-                                ? "http://localhost:9999/" //
-                                : "http://" + id.toString() + ":9999/"))
-                        .pathSegment(resource);
-            }
+            private final WebClient webClient = WebClient.builder()
+                    .baseUrl(URI.create(
+                            Config.IS_DEVELOPMENT//
+                                    ? "http://localhost:9999/" //
+                                    : "http://" + id.toString() + ":9999/")
+                            .toString())
+                    .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
+                    .build();
 
             public Mono<String> getPluginVersion() {
-                return WebClient.create(serverUri("plugin-version").toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)//
+                        .uri("plugin-version")//
                         .retrieve()//
                         .bodyToMono(String.class)//
                         .timeout(Duration.ofSeconds(5));
             }
 
             public Mono<Void> setPlayer(MindustryPlayerDto request) {
-                return WebClient.create(serverUri("set-player").toUriString())//
-                        .post()//
+                return webClient.method(HttpMethod.POST)//
+                        .uri("set-player")//
                         .bodyValue(request)//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -86,17 +99,16 @@ public class GatewayService {
             }
 
             public Flux<Player> getPlayers() {
-                return WebClient.create(serverUri("players").toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)//
+                        .uri("players")//
                         .retrieve()//
                         .bodyToFlux(Player.class)//
                         .timeout(Duration.ofSeconds(5));
             }
 
             public Mono<Void> ok() {
-                return WebClient.create(serverUri("ok")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("ok")
                         .retrieve()//
                         .bodyToMono(String.class)//
                         .timeout(Duration.ofMillis(100))//
@@ -106,27 +118,24 @@ public class GatewayService {
             }
 
             public Mono<StatsDto> getStats() {
-                return WebClient.create(serverUri("stats")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("stats")
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
                         .timeout(Duration.ofSeconds(5));
             }
 
             public Mono<StatsDto> getDetailStats() {
-                return WebClient.create(serverUri("detail-stats")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("detail-stats")
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
                         .timeout(Duration.ofSeconds(5));
             }
 
             public Mono<Void> sendCommand(String... command) {
-                return WebClient.create(serverUri("commands")
-                        .toUriString())//
-                        .post()//
+                return webClient.method(HttpMethod.POST)
+                        .uri("commands")
                         .bodyValue(command)//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -135,9 +144,8 @@ public class GatewayService {
             }
 
             public Mono<Void> host(HostServerRequest request) {
-                return WebClient.create(serverUri("host")
-                        .toUriString())//
-                        .post()//
+                return webClient.method(HttpMethod.POST)
+                        .uri("host")
                         .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -146,9 +154,8 @@ public class GatewayService {
             }
 
             public Mono<Boolean> isHosting() {
-                return WebClient.create(serverUri("hosting")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("hosting")
                         .retrieve()//
                         .bodyToMono(Boolean.class)//
                         .timeout(Duration.ofSeconds(1))//
@@ -156,30 +163,28 @@ public class GatewayService {
             }
 
             public Flux<ServerCommandDto> getCommands() {
-                return WebClient.create(serverUri("commands")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("commands")
                         .retrieve()//
                         .bodyToFlux(ServerCommandDto.class)//
                         .timeout(Duration.ofSeconds(10));
             }
 
             public Flux<PlayerInfoDto> getPlayers(int page, int size, Boolean banned) {
-                return WebClient.create(serverUri("player-infos")//
-                        .queryParam("page", page)
-                        .queryParam("size", size)
-                        .queryParam("banned", banned)//
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri(builder -> builder.pathSegment("player-infos")//
+                                .queryParam("page", page)
+                                .queryParam("size", size)
+                                .queryParam("banned", banned)//
+                                .build())
                         .retrieve()//
                         .bodyToFlux(PlayerInfoDto.class)//
                         .timeout(Duration.ofSeconds(10));
             }
 
             public Mono<Map<String, Long>> getKickedIps() {
-                return WebClient.create(serverUri("kicks")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("kicks")
                         .retrieve()//
                         .bodyToMono(new ParameterizedTypeReference<Map<String, Long>>() {
                         })//
@@ -187,9 +192,8 @@ public class GatewayService {
             }
 
             public Mono<JsonNode> getRoutes() {
-                return WebClient.create(serverUri("routes")
-                        .toUriString())//
-                        .get()//
+                return webClient.method(HttpMethod.GET)
+                        .uri("routes")
                         .retrieve()//
                         .bodyToMono(JsonNode.class)//
                         .timeout(Duration.ofSeconds(10));
@@ -197,39 +201,33 @@ public class GatewayService {
         }
 
         public class Backend {
-            public void setHeaders(HttpHeaders headers) {
-                headers.setBearerAuth("Bearer " + envConfig.serverConfig().accessToken());
-                headers.set("X-SERVER-ID", id.toString());
-            }
-
-            public String backendUri(String... resource) {
-                return UriComponentsBuilder.fromUriString(
-                        String.join("/", envConfig.serverConfig().serverUrl(), "api/v3", String.join("/", resource)))
-                        .build().toUriString();
-            }
+            private final WebClient webClient = WebClient.builder()
+                    .baseUrl(URI.create(envConfig.serverConfig().serverUrl()).resolve("api/v3").toString())
+                    .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
+                    .defaultHeaders(headers -> {
+                        headers.setBearerAuth("Bearer " + envConfig.serverConfig().accessToken());
+                        headers.set("X-SERVER-ID", id.toString());
+                    })
+                    .build();
 
             public Mono<MindustryPlayerDto> setPlayer(PlayerDto payload) {
-                return WebClient.create(backendUri("servers", id.toString(), "players"))//
-                        .post()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.POST)
+                        .uri("servers", id.toString(), "players")//
                         .bodyValue(payload)//
                         .retrieve()//
                         .bodyToMono(MindustryPlayerDto.class);
             }
 
             public Mono<Void> setStats(StatsDto payload) {
-                return WebClient.create(backendUri("servers", id.toString(), "stats"))//
-                        .post()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.POST)
+                        .uri("servers", id.toString(), "stats")//
                         .bodyValue(payload)//
                         .retrieve()//
                         .bodyToMono(Void.class);
             }
 
             public Mono<ApiServerDto> getServers(int page, int size) {
-                return WebClient.create(backendUri("servers?page=%s&size=%s".formatted(page, size)))//
-                        .get()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.GET).uri("servers?page=%s&size=%s".formatted(page, size))//
                         .retrieve()//
                         .bodyToFlux(ApiServerDto.class)//
                         .collectList()//
@@ -237,17 +235,15 @@ public class GatewayService {
             }
 
             public Mono<String> host(String serverId) {
-                return WebClient.create(backendUri("servers", serverId, "host-from-server"))//
-                        .post()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.POST)
+                        .uri("servers", serverId, "host-from-server")//
                         .retrieve()//
                         .bodyToMono(String.class);
             }
 
             public Mono<Void> sendChat(String chat) {
-                return WebClient.create(backendUri("servers", id.toString(), "chat"))//
-                        .post()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.POST)
+                        .uri("servers", id.toString(), "chat")//
                         .bodyValue(chat)//
                         .retrieve()//
                         .bodyToMono(String.class)//
@@ -255,9 +251,8 @@ public class GatewayService {
             }
 
             public Mono<Void> sendBuildLog(ArrayList<BuildLogDto> logs) {
-                return WebClient.create(backendUri("servers", id.toString(), "build-log"))//
-                        .post()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.POST)//
+                        .uri("servers", id.toString(), "build-log")//
                         .bodyValue(logs)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
@@ -266,9 +261,8 @@ public class GatewayService {
             }
 
             public Mono<Void> sendConsole(String console) {
-                return WebClient.create(backendUri("servers", id.toString(), "console"))//
-                        .post()//
-                        .headers(this::setHeaders)//
+                return webClient.method(HttpMethod.POST)
+                        .uri("servers", id.toString(), "console")//
                         .bodyValue(console)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
@@ -276,19 +270,10 @@ public class GatewayService {
                         .onErrorComplete();
             }
 
-            public Mono<Integer> getTotalPlayer() {
-                return WebClient.create(backendUri("servers", "total-player"))//
-                        .post()//
-                        .headers(this::setHeaders)//
-                        .retrieve()//
-                        .bodyToMono(Integer.class);
-            }
-
             public Mono<String> translate(String text, String targetLanguage) {
-                return WebClient.create(backendUri("servers", "translate", targetLanguage))//
-                        .post()//
+                return webClient.method(HttpMethod.POST)//
+                        .uri("servers", "translate", targetLanguage)//
                         .bodyValue(text)//
-                        .headers(this::setHeaders)//
                         .retrieve()//
                         .bodyToMono(String.class);
             }

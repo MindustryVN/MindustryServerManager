@@ -239,7 +239,7 @@ public class ServerService {
                 .subscribe();
     }
 
-    public Mono<Integer> getTotalPlayers() {
+    public Mono<Long> getTotalPlayers() {
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
@@ -247,10 +247,11 @@ public class ServerService {
 
         return Flux.fromIterable(containers)//
                 .map(container -> readMetadataFromContainer(container).orElseThrow())
-                .flatMap(server -> gatewayService.of(server.getInit().getId()).getBackend().getTotalPlayer())//
-                .onErrorReturn(0)//
+                .flatMap(server -> gatewayService.of(server.getInit().getId()).getServer().getStats())//
+                .map(stats -> stats.getPlayers())//
                 .collectList()//
-                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)));
+                .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)))
+                .onErrorReturn(0L);//
     }
 
     public Container findContainerByServerId(UUID serverId) {
