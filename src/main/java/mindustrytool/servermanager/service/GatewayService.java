@@ -246,7 +246,7 @@ public class GatewayService {
 
             public Mono<String> host(String serverId) {
                 return webClient.method(HttpMethod.POST)
-                        .uri("servers/" + serverId + "host-from-server")//
+                        .uri("servers/" + serverId + "/host-from-server")//
                         .retrieve()//
                         .bodyToMono(String.class);
             }
