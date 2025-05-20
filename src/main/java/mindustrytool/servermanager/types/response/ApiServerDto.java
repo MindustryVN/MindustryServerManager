@@ -8,5 +8,5 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class ApiServerDto {
-    private List<ApiServerDto> servers = new ArrayList<ApiServerDto>();
+    private List<ServerDto> servers = new ArrayList<ServerDto>();
 }

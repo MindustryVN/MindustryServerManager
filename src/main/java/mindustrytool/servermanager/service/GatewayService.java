@@ -28,6 +28,7 @@ import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.PlayerDto;
 import mindustrytool.servermanager.types.response.PlayerInfoDto;
 import mindustrytool.servermanager.types.response.ServerCommandDto;
+import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Flux;
@@ -238,7 +239,7 @@ public class GatewayService {
                 return webClient.method(HttpMethod.GET)//
                         .uri("servers?page=%s&size=%s".formatted(page, size))//
                         .retrieve()//
-                        .bodyToFlux(ApiServerDto.class)//
+                        .bodyToFlux(ServerDto.class)//
                         .collectList()//
                         .map(server -> new ApiServerDto().setServers(server));
             }
