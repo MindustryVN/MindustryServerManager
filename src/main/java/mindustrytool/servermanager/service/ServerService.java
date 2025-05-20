@@ -798,6 +798,14 @@ public class ServerService {
     public Mono<StatsDto> stats(UUID serverId) {
         var container = findContainerByServerId(serverId);
 
+        if (container == null) {
+            return Mono.just(new StatsDto().setStatus("DELETED"));
+        }
+
+        if (!container.getState().equalsIgnoreCase("running")) {
+            return Mono.just(new StatsDto().setStatus("DOWN"));
+        }
+
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
@@ -809,9 +817,6 @@ public class ServerService {
                                         ? "NOT_RESPONSE"
                                         : "DOWN"))
                 .map(serverStats -> {
-                    if (container == null) {
-                        return serverStats;
-                    }
                     var containerStats = stats.get(serverId);
                     if (containerStats != null) {
                         serverStats.setCpuUsage(containerStats.cpuUsage())//
@@ -826,6 +831,14 @@ public class ServerService {
     public Mono<StatsDto> detailStats(UUID serverId) {
         var container = findContainerByServerId(serverId);
 
+        if (container == null) {
+            return Mono.just(new StatsDto().setStatus("DELETED"));
+        }
+
+        if (!container.getState().equalsIgnoreCase("running")) {
+            return Mono.just(new StatsDto().setStatus("DOWN"));
+        }
+
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getDetailStats()//
@@ -837,10 +850,6 @@ public class ServerService {
                                         ? "NOT_RESPONSE"
                                         : "DOWN"))
                 .map(serverStats -> {
-
-                    if (container == null) {
-                        return serverStats;
-                    }
                     var containerStats = stats.get(serverId);
 
                     if (containerStats != null) {
