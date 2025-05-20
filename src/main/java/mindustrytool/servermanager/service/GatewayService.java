@@ -166,7 +166,7 @@ public class GatewayService {
                         .uri("hosting")
                         .retrieve()//
                         .bodyToMono(Boolean.class)//
-                        .timeout(Duration.ofSeconds(1))//
+                        .timeout(Duration.ofMillis(100))//
                         .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)));
             }
 

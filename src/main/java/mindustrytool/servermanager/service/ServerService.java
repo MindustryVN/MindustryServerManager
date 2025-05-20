@@ -787,7 +787,7 @@ public class ServerService {
                 .flatMap(isHosting -> isHosting //
                         ? Mono.empty()
                         : ApiError.badRequest("Server is not hosting yet"))//
-                .retryWhen(Retry.fixedDelay(10, Duration.ofSeconds(1)))//
+                .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)))//
                 .then();
     }
 
