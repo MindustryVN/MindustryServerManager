@@ -313,8 +313,11 @@ public class ServerService {
                 .flatMap(server -> stats(server.getId())//
                         .map(stats -> modelMapper.map(server, ServerWithStatsDto.class).setUsage(stats)
                                 .setStatus(stats.status))//
-                        .onErrorResume(_ignore -> Mono
-                                .just(modelMapper.map(server, ServerWithStatsDto.class).setUsage(new StatsDto())))//
+                        .onErrorResume(error -> {
+                            error.printStackTrace();
+                            return Mono
+                                    .just(modelMapper.map(server, ServerWithStatsDto.class).setUsage(new StatsDto()));
+                        })//
                 );
     }
 
