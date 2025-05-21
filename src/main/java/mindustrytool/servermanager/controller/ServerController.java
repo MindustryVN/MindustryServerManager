@@ -75,6 +75,11 @@ public class ServerController {
         return serverService.getFiles(serverId, URLDecoder.decode(path, StandardCharsets.UTF_8));
     }
 
+    @GetMapping("/servers/{id}/files/exists")
+    boolean fileExists(@PathVariable("id") UUID serverId, @RequestParam("path") String path) {
+        return serverService.fileExists(serverId, URLDecoder.decode(path, StandardCharsets.UTF_8));
+    }
+
     @GetMapping("/servers/{id}/files/download")
     public ResponseEntity<Resource> downloadFile(//
             @PathVariable("id") UUID id, @RequestParam(name = "path", required = true) String path) {

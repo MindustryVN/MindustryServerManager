@@ -679,6 +679,12 @@ public class ServerService {
                 });
     }
 
+    public boolean fileExists(UUID serverId, String path) {
+        var file = getFile(serverId, path);
+
+        return file.exists();
+    }
+
     public Mono<Void> createFile(UUID serverId, FilePart filePart, String path) {
         var folder = getFile(serverId, path);
 
