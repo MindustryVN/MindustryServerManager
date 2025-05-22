@@ -129,15 +129,15 @@ public class ServerService {
             float cpuPercent = 0f;
 
             if (snapshots != null && snapshots[0] != null && snapshots[1] != null) {
-                long cpuDelta = snapshots[1].getCpuStats().getCpuUsage().getTotalUsage()
+                Long cpuDelta = snapshots[1].getCpuStats().getCpuUsage().getTotalUsage()
                         - snapshots[0].getCpuStats().getCpuUsage().getTotalUsage();
 
-                long systemDelta = Optional.ofNullable(snapshots[1].getCpuStats().getSystemCpuUsage()).orElse(0L)
+                Long systemDelta = Optional.ofNullable(snapshots[1].getCpuStats().getSystemCpuUsage()).orElse(0L)
                         - Optional.ofNullable(snapshots[0].getCpuStats().getSystemCpuUsage()).orElse(0L);
 
-                long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
+                Long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
 
-                if (systemDelta > 0 && cpuCores > 0) {
+                if (systemDelta != null && systemDelta > 0 && cpuCores != null && cpuCores > 0) {
                     cpuPercent = (float) cpuDelta / systemDelta * cpuCores * 100.0f;
                 }
             }
