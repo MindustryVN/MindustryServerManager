@@ -28,7 +28,12 @@ public class DockerService {
                     .exec()//
                     .stream()//
                     .anyMatch(
-                            image -> List.of(image.getRepoTags()).contains(envConfig.docker().mindustryServerImage()));
+                            image -> {
+                                if (image.getRepoTags() == null) {
+                                    return false;
+                                }
+                                return List.of(image.getRepoTags()).contains(envConfig.docker().mindustryServerImage());
+                            });
 
             if (!imageExists) {
                 log.info("Image not exits, pulling image with name: " + envConfig.docker().mindustryServerImage());
