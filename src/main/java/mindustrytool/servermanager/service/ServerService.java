@@ -282,8 +282,11 @@ public class ServerService {
         dockerClient.stopContainerCmd(container.getId()).exec();
         log.info("Stopped: " + container.getNames()[0]);
 
-        return Mono.empty();
+        return syncStats(serverId);
+    }
 
+    private Mono<Void> syncStats(UUID serverId) {
+        return stats(serverId).flatMap(stats -> gatewayService.of(serverId).getBackend().setStats(stats));
     }
 
     public Mono<Void> remove(UUID serverId) {
@@ -298,7 +301,8 @@ public class ServerService {
 
         dockerClient.removeContainerCmd(container.getId()).exec();
         log.info("Removed: " + container.getNames()[0]);
-        return Mono.empty();
+
+        return syncStats(serverId);
     }
 
     public Flux<ServerWithStatsDto> getServers() {
@@ -455,7 +459,8 @@ public class ServerService {
                 .then(serverGateway.isHosting())//
                 .flatMap(isHosting -> isHosting //
                         ? Mono.empty()
-                        : host(request.getInit().getId(), request.getHost()));
+                        : host(request.getInit().getId(), request.getHost()))
+                .then(syncStats(request.getInit().getId()));
     }
 
     private String createNewServerContainer(HostFromSeverRequest request) {
@@ -692,8 +697,6 @@ public class ServerService {
             folder.mkdirs();
         }
 
-
-
         if (folder.getPath().contains("mods")) {
             // Remove all old mods if exists
             var parts = filePart.filename().replace(".jar", "").split("_");
@@ -789,7 +792,8 @@ public class ServerService {
                             .host(new HostServerRequest()// \
                                     .setMode(request.getMode())
                                     .setHostCommand(request.getHostCommand())))//
-                    .then(waitForHosting(gateway));
+                    .then(waitForHosting(gateway))
+                    .then(syncStats(serverId));
         });
     }
 

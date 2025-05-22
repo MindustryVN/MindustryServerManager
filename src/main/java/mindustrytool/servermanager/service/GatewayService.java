@@ -41,7 +41,7 @@ import reactor.util.retry.Retry;
 public class GatewayService {
 
     private final EnvConfig envConfig;
-
+    
     public GatewayClient of(UUID serverId) {
         return new GatewayClient(serverId, envConfig);
     }
