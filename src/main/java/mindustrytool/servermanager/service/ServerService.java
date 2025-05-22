@@ -692,12 +692,12 @@ public class ServerService {
             folder.mkdirs();
         }
 
-        if (folder.getPath().contains("config/mods")) {
+        if (folder.getPath().contains("mods")) {
             // Remove all old mods if exists
             var parts = path.replace(".jar", "").split("_");
             if (parts.length == 2) {
                 try {
-                    var id = UUID.fromString(parts[1]);
+                    var id = UUID.fromString(parts[0]);
                     new Fi(folder)//
                             .findAll()//
                             .select(f -> f.name().startsWith(id.toString()))//
