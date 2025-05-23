@@ -28,6 +28,7 @@ import com.github.dockerjava.api.DockerClient;
 import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
+import com.github.dockerjava.api.model.Event;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
@@ -104,8 +105,29 @@ public class ServerService {
     private final HashMap<UUID, ContainerStats> stats = new HashMap<>();
 
     @PostConstruct
-    @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
     private void init() {
+        dockerClient.eventsCmd()
+                .withEventFilter("start")
+                .exec(new ResultCallback.Adapter<>() {
+                    @Override
+                    public void onNext(Event event) {
+                        String containerId = event.getId();
+                        var containers = dockerClient.listContainersCmd().withIdFilter(List.of(containerId)).exec();
+
+                        if (containers.size() != 1) {
+                            return;
+                        }
+
+                        var container = containers.get(0);
+                        readMetadataFromContainer(container)
+                                .ifPresent(metadata -> attachToLogs(containerId, metadata.getInit().getId()));
+                    }
+                });
+    }
+
+    @PostConstruct
+    @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
+    private void findAndAttachToLogs() {
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
