@@ -999,5 +999,7 @@ public class ServerService {
                 .withStdErr(true)
                 .withFollowStream(true)
                 .exec(callback);
+
+        System.out.println("[" + serverId + "] Log stream started.");
     }
 }
