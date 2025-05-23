@@ -975,7 +975,7 @@ public class ServerService {
                     .bufferTimeout(20, Duration.ofMillis(100))
                     .concatMap(batch -> gatewayService.of(serverId)//
                             .getBackend()
-                            .sendConsole(String.join("\n", batch))
+                            .sendConsole(String.join("", batch))
                             .onErrorResume(_e -> Mono.empty())) // preserve order
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
