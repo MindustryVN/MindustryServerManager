@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -25,9 +26,11 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.dockerjava.api.DockerClient;
+import com.github.dockerjava.api.async.ResultCallback;
 import com.github.dockerjava.api.model.Bind;
 import com.github.dockerjava.api.model.Container;
 import com.github.dockerjava.api.model.ExposedPort;
+import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.RestartPolicy;
@@ -41,6 +44,7 @@ import arc.struct.StringMap;
 import arc.util.serialization.Json;
 import arc.util.serialization.Jval;
 import arc.util.serialization.Jval.Jformat;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import mindustry.core.Version;
@@ -80,6 +84,7 @@ public class ServerService {
     private final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
     private final Json json = new Json();
+    private final Set<String> attachedContainers = ConcurrentHashMap.newKeySet(); // Track attached containers
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
@@ -91,6 +96,20 @@ public class ServerService {
     }
 
     private final HashMap<UUID, ContainerStats> stats = new HashMap<>();
+
+    @PostConstruct
+    private void init() {
+        log.info("ServerService initialized");
+
+        var containers = dockerClient.listContainersCmd()//
+                .withShowAll(true)//
+                .withLabelFilter(List.of(Config.serverLabelName))//
+                .exec();
+
+        for (var container : containers) {
+            attachToLogs(container.getId());
+        }
+    }
 
     @Scheduled(fixedDelay = 3, timeUnit = TimeUnit.SECONDS)
     private void updateStats() {
@@ -417,7 +436,7 @@ public class ServerService {
             }
         }
 
-        String containerId;
+        String containerId = null;
 
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
@@ -453,6 +472,8 @@ public class ServerService {
         log.info("Created server: " + request.getInit().getName());
 
         var serverGateway = gatewayService.of(request.getInit().getId()).getServer();
+
+        attachToLogs(containerId);
 
         return serverGateway//
                 .ok()
@@ -938,5 +959,37 @@ public class ServerService {
         }
 
         file.delete();
+    }
+
+    private synchronized void attachToLogs(String containerId) {
+        if (!attachedContainers.add(containerId)) {
+            return;
+        }
+
+        ResultCallback.Adapter<Frame> callback = new ResultCallback.Adapter<>() {
+            @Override
+            public void onNext(Frame frame) {
+                System.out.print("[" + containerId.substring(0, 12) + "] " + new String(frame.getPayload()));
+            }
+
+            @Override
+            public void onComplete() {
+                System.out.println("[" + containerId.substring(0, 12) + "] Log stream ended.");
+                attachedContainers.remove(containerId);
+            }
+
+            @Override
+            public void onError(Throwable throwable) {
+                System.err
+                        .println("[" + containerId.substring(0, 12) + "] Log stream error: " + throwable.getMessage());
+                attachedContainers.remove(containerId);
+            }
+        };
+
+        dockerClient.logContainerCmd(containerId)
+                .withStdOut(true)
+                .withStdErr(true)
+                .withFollowStream(true)
+                .exec(callback);
     }
 }
