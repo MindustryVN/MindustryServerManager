@@ -213,13 +213,34 @@ public class ServerService {
                     var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
 
                     if (isRunning) {
+                        if (metadata.getInit().isAutoTurnOff() == false) {
+                            return gatewayService.of(server.getId())//
+                                    .getServer()//
+                                    .isHosting()
+                                    .defaultIfEmpty(false)
+                                    .onErrorReturn(false)
+                                    .flatMap(isHosting -> {
+                                        if (isHosting) {
+                                            return Mono.empty();
+                                        }
+
+                                        sendConsole(server.getId(),
+                                                "Restart server " + server.getId() + " due to running but not hosting");
+
+                                        return remove(server.getId())
+                                                .thenReturn(gatewayService.of(server.getId()).getBackend())
+                                                .flatMap(backend -> backend.host(server.getId().toString()))
+                                                .then();
+                                    });
+                        }
+
                         return gatewayService.of(server.getId())//
                                 .getServer()//
                                 .getPlayers()//
                                 .collectList()//
                                 .onErrorReturn((List.of()))
                                 .flatMap(players -> {
-                                    boolean shouldKill = players.isEmpty() && server.isAutoTurnOff();
+                                    boolean shouldKill = players.isEmpty();
 
                                     var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
 
@@ -264,6 +285,7 @@ public class ServerService {
                         return Mono.empty();
                     }
                 })//
+                .subscribeOn(Schedulers.single())
                 .subscribe();
     }
 
