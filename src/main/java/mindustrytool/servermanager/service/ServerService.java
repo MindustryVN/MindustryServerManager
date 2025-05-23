@@ -90,6 +90,7 @@ public class ServerService {
 
     private final Map<UUID, Disposable> streamSubscriptions = new ConcurrentHashMap<>();
     private final Map<UUID, Sinks.Many<String>> consoleStreams = new ConcurrentHashMap<>();
+    private final Map<UUID, ResultCallback.Adapter<Frame>> adapters = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
@@ -999,7 +1000,7 @@ public class ServerService {
     }
 
     private synchronized void attachToLogs(String containerId, UUID serverId) {
-        if (streamSubscriptions.containsKey(serverId)) {
+        if (adapters.containsKey(serverId)) {
             return;
         }
 
@@ -1030,7 +1031,9 @@ public class ServerService {
             }
         };
 
-        dockerClient.logContainerCmd(containerId)
+        adapters.put(serverId, callback);
+
+       dockerClient.logContainerCmd(containerId)
                 .withStdOut(true)
                 .withStdErr(true)
                 .withFollowStream(true)
