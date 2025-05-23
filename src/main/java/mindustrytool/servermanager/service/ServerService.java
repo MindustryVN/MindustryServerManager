@@ -69,6 +69,7 @@ import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.core.publisher.Sinks.EmitResult;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
@@ -974,7 +975,8 @@ public class ServerService {
                     .bufferTimeout(50, Duration.ofMillis(100))
                     .concatMap(batch -> gatewayService.of(serverId)//
                             .getBackend()
-                            .sendConsole(String.join("\n", batch))) // preserve order
+                            .sendConsole(String.join("\n", batch))
+                            .onErrorResume(_e -> Mono.empty())) // preserve order
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
                             null,
@@ -988,6 +990,9 @@ public class ServerService {
         var result = sink.tryEmitNext(message);
 
         if (result.isFailure()) {
+            if (result == EmitResult.FAIL_CANCELLED) {
+                streamSubscriptions.remove(serverId);
+            }
             System.out.println("[" + serverId + "] Log stream error: " + result);
         }
     }
@@ -1030,7 +1035,7 @@ public class ServerService {
     }
 
     public void removeConsoleStream(UUID serverId) {
-        Optional.ofNullable(streamSubscriptions.remove(serverId)).ifPresent(Disposable::dispose);
         consoleStreams.remove(serverId);
+        Optional.ofNullable(streamSubscriptions.remove(serverId)).ifPresent(Disposable::dispose);
     }
 }
