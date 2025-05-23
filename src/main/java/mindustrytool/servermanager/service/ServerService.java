@@ -986,13 +986,15 @@ public class ServerService {
             return newSink;
         });
 
-        var result = sink.tryEmitNext(message);
+        synchronized (sink) {
+            var result = sink.tryEmitNext(message);
 
-        if (result.isFailure()) {
-            if (result == EmitResult.FAIL_CANCELLED) {
-                streamSubscriptions.remove(serverId);
+            if (result.isFailure()) {
+                if (result == EmitResult.FAIL_CANCELLED) {
+                    streamSubscriptions.remove(serverId);
+                }
+                System.out.println("[" + serverId + "] Log stream error: " + result);
             }
-            System.out.println("[" + serverId + "] Log stream error: " + result);
         }
     }
 
