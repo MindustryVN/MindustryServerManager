@@ -1023,6 +1023,7 @@ public class ServerService {
                 .withStdOut(true)
                 .withStdErr(true)
                 .withFollowStream(true)
+                .withTail(0)
                 .exec(callback);
 
         System.out.println("[" + serverId + "] Log stream started.");
