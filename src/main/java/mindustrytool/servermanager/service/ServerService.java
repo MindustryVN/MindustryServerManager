@@ -103,9 +103,8 @@ public class ServerService {
     private final HashMap<UUID, ContainerStats> stats = new HashMap<>();
 
     @PostConstruct
+    @Scheduled(fixedDelay = 1, timeUnit = TimeUnit.MINUTES)
     private void init() {
-        log.info("ServerService initialized");
-
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
@@ -1036,7 +1035,7 @@ public class ServerService {
                 .withTail(0)
                 .exec(callback);
 
-        System.out.println("[" + serverId + "] Log stream started.");
+        System.out.println("[" + serverId + "] Log stream attached.");
     }
 
     public void removeConsoleStream(UUID serverId) {
