@@ -3,9 +3,9 @@ package mindustrytool.servermanager.service;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -42,7 +42,7 @@ import reactor.util.retry.Retry;
 public class GatewayService {
 
     private final EnvConfig envConfig;
-    private final HashMap<UUID, GatewayClient> cache = new HashMap<>();
+    private final ConcurrentHashMap<UUID, GatewayClient> cache = new ConcurrentHashMap<>();
 
     public GatewayClient of(UUID serverId) {
         return cache.computeIfAbsent(serverId, _id -> new GatewayClient(serverId, envConfig));
