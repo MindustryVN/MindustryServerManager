@@ -968,7 +968,7 @@ public class ServerService {
 
     public void sendConsole(UUID serverId, String message) {
         Sinks.Many<String> sink = consoleStreams.computeIfAbsent(serverId, id -> {
-            Sinks.Many<String> newSink = Sinks.many().unicast().onBackpressureBuffer();
+            Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer();
 
             Disposable subscription = newSink.asFlux()
                     .bufferTimeout(10, Duration.ofMillis(100))
@@ -985,7 +985,7 @@ public class ServerService {
             return newSink;
         });
 
-        sink.tryEmitNext(message);
+        sink.tryEmitNext(message).orThrow();
     }
 
     private synchronized void attachToLogs(String containerId, UUID serverId) {
