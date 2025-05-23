@@ -5,9 +5,11 @@ import java.io.File;
 import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.http.codec.ServerCodecConfigurer;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.reactive.config.WebFluxConfigurer;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonFactoryBuilder;
@@ -19,6 +21,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import jakarta.annotation.PostConstruct;
+import reactor.netty.http.client.HttpClient;
 
 @Configuration
 @EnableScheduling
@@ -67,6 +70,14 @@ public class Config implements WebFluxConfigurer {
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)//
                 .setSerializationInclusion(JsonInclude.Include.NON_NULL)//
                 .registerModule(module);
+    }
+
+    @Bean
+    WebClient webClient(WebClient.Builder builder) {
+        HttpClient httpClient = HttpClient.create()//
+                .followRedirect(true);
+
+        return builder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
     }
 
 }

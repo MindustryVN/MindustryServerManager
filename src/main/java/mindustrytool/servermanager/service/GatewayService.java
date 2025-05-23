@@ -46,9 +46,10 @@ public class GatewayService {
 
     private final EnvConfig envConfig;
     private final ConcurrentHashMap<UUID, GatewayClient> cache = new ConcurrentHashMap<>();
+    private final WebClient webClient;
 
     public GatewayClient of(UUID serverId) {
-        return cache.computeIfAbsent(serverId, _id -> new GatewayClient(serverId, envConfig));
+        return cache.computeIfAbsent(serverId, _id -> new GatewayClient(serverId, envConfig, webClient));
     }
 
     @RequiredArgsConstructor
@@ -57,6 +58,7 @@ public class GatewayService {
         @Getter
         private final UUID id;
         private final EnvConfig envConfig;
+        private final WebClient defaultWebClient;
 
         @Getter
         private final Backend backend;
@@ -64,9 +66,10 @@ public class GatewayService {
         @Getter
         private final Server server;
 
-        public GatewayClient(UUID id, EnvConfig envConfig) {
+        public GatewayClient(UUID id, EnvConfig envConfig, WebClient webClient) {
             this.id = id;
             this.envConfig = envConfig;
+            this.defaultWebClient = webClient;
 
             this.backend = new Backend();
             this.server = new Server();
@@ -85,7 +88,8 @@ public class GatewayService {
         }
 
         public class Server {
-            private final WebClient webClient = WebClient.builder()
+            private final WebClient webClient = defaultWebClient
+                    .mutate()
                     .baseUrl(URI.create(
                             Config.IS_DEVELOPMENT//
                                     ? "http://localhost:9999/" //
@@ -215,7 +219,7 @@ public class GatewayService {
         }
 
         public class Backend {
-            private final WebClient webClient = WebClient.builder()
+            private final WebClient webClient = defaultWebClient.mutate()
                     .baseUrl(URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/").toString())
                     .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
                     .defaultHeaders(headers -> {
