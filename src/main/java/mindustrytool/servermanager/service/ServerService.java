@@ -971,7 +971,7 @@ public class ServerService {
             Sinks.Many<String> newSink = Sinks.many().unicast().onBackpressureBuffer();
 
             Disposable subscription = newSink.asFlux()
-                    .bufferTimeout(10, Duration.ofMillis(100))
+                    .bufferTimeout(50, Duration.ofMillis(100))
                     .concatMap(batch -> gatewayService.of(serverId)//
                             .getBackend()
                             .sendConsole(String.join("\n", batch))) // preserve order
@@ -1000,6 +1000,7 @@ public class ServerService {
         ResultCallback.Adapter<Frame> callback = new ResultCallback.Adapter<>() {
             @Override
             public void onNext(Frame frame) {
+                System.out.println("[" + serverId + "] Log stream: " + new String(frame.getPayload()));
                 sendConsole(serverId, new String(frame.getPayload()));
             }
 
