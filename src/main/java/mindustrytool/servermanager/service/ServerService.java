@@ -12,7 +12,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -66,8 +65,11 @@ import mindustrytool.servermanager.types.response.ServerFileDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
 import mindustrytool.servermanager.utils.Utils;
+import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -84,7 +86,9 @@ public class ServerService {
     private final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
     private final Json json = new Json();
-    private final Set<String> attachedContainers = ConcurrentHashMap.newKeySet(); // Track attached containers
+
+    private final Map<UUID, Disposable> streamSubscriptions = new ConcurrentHashMap<>();
+    private final Map<UUID, Sinks.Many<String>> consoleStreams = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
@@ -206,7 +210,6 @@ public class ServerService {
 
                     var isSameServerHash = metadata.getServerImageHash().equals(serverImage.getId());
                     var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
-                    var backend = gatewayService.of(server.getId()).getBackend();
 
                     if (isRunning) {
                         return gatewayService.of(server.getId())//
@@ -221,12 +224,12 @@ public class ServerService {
 
                                     if (shouldKill) {
                                         if (killFlag) {
-                                            backend.sendConsole("Auto shut down server: " + server.getId());
+                                            sendConsole(server.getId(), "Auto shut down server: " + server.getId());
                                             return shutdown(server.getId());
                                         } else {
                                             log.info("Server {} has no players, flag to kill.", server.getId());
                                             serverKillFlags.put(server.getId(), true);
-                                            backend.sendConsole(
+                                            sendConsole(server.getId(),
                                                     "Server " + server.getId() + " has no players, flag to kill");
 
                                             return Mono.empty();
@@ -235,8 +238,8 @@ public class ServerService {
                                         if (killFlag) {
                                             serverKillFlags.put(server.getId(), false);
                                             log.info("Remove flag from server {}", server.getId());
-                                            backend
-                                                    .sendConsole("Remove kill flag from server  " + server.getId());
+                                            sendConsole(server.getId(),
+                                                    "Remove kill flag from server  " + server.getId());
                                             return Mono.empty();
                                         }
                                     }
@@ -244,10 +247,8 @@ public class ServerService {
                                     return Mono.empty();
                                 })//
                                 .retry(5)//
-                                .doOnError(_ignore -> gatewayService.of(server.getId())//
-                                        .getBackend()
-                                        .sendConsole("Server not response, auto shutdown: " + server
-                                                .getId()))
+                                .doOnError(_ignore -> sendConsole(server.getId(),
+                                        "Server not response, auto shutdown: " + server.getId()))
                                 .onErrorComplete();
                     } else {
                         if (!isSameManagerHash || !isSameServerHash) {
@@ -256,7 +257,8 @@ public class ServerService {
                             }
                             dockerClient.removeContainerCmd(container.getId()).exec();
 
-                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash");
+                            sendConsole(server.getId(),
+                                    "Remove server " + server.getId() + " due to mismatch version hash");
                         }
                         return Mono.empty();
                     }
@@ -734,9 +736,7 @@ public class ServerService {
                             .findAll()//
                             .select(f -> f.name().startsWith(id.toString()))//
                             .each(f -> {
-                                gatewayService.of(serverId)//
-                                        .getBackend()
-                                        .sendConsole("Delete old plugin/mod: " + f.name());
+                                sendConsole(serverId, "Delete old plugin/mod: " + f.name());
                                 f.delete();
                             });
                 } catch (Exception e) {
@@ -966,23 +966,42 @@ public class ServerService {
         file.delete();
     }
 
+    public void sendConsole(UUID serverId, String message) {
+        Sinks.Many<String> sink = consoleStreams.computeIfAbsent(serverId, id -> {
+            Sinks.Many<String> newSink = Sinks.many().unicast().onBackpressureBuffer();
+
+            Disposable subscription = newSink.asFlux()
+                    .concatMap(msg -> gatewayService.of(serverId)//
+                            .getBackend()
+                            .sendConsole(message)) // preserve order
+                    .subscribeOn(Schedulers.boundedElastic())
+                    .subscribe(
+                            null,
+                            error -> log.error("Error in log stream for server {}", id, error),
+                            () -> log.info("Log stream for server {} completed", id));
+
+            streamSubscriptions.put(id, subscription);
+            return newSink;
+        });
+
+        sink.tryEmitNext(message);
+    }
+
     private synchronized void attachToLogs(String containerId, UUID serverId) {
-        if (!attachedContainers.add(containerId)) {
+        if (streamSubscriptions.containsKey(serverId)) {
             return;
         }
 
         ResultCallback.Adapter<Frame> callback = new ResultCallback.Adapter<>() {
             @Override
             public void onNext(Frame frame) {
-                gatewayService.of(serverId)//
-                        .getBackend()
-                        .sendConsole(new String(frame.getPayload()));
+                sendConsole(serverId, new String(frame.getPayload()));
             }
 
             @Override
             public void onComplete() {
                 System.out.println("[" + serverId + "] Log stream ended.");
-                attachedContainers.remove(containerId);
+                removeConsoleStream(serverId);
             }
 
             @Override
@@ -990,7 +1009,7 @@ public class ServerService {
                 System.err
                         .println("[" + serverId + "] Log stream error: " + throwable.getMessage());
                 throwable.printStackTrace();
-                attachedContainers.remove(containerId);
+                removeConsoleStream(serverId);
             }
         };
 
@@ -1001,5 +1020,10 @@ public class ServerService {
                 .exec(callback);
 
         System.out.println("[" + serverId + "] Log stream started.");
+    }
+
+    public void removeConsoleStream(UUID serverId) {
+        Optional.ofNullable(streamSubscriptions.remove(serverId)).ifPresent(Disposable::dispose);
+        consoleStreams.remove(serverId);
     }
 }

@@ -36,7 +36,6 @@ import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -46,10 +45,9 @@ public class GatewayService {
 
     private final EnvConfig envConfig;
     private final ConcurrentHashMap<UUID, GatewayClient> cache = new ConcurrentHashMap<>();
-    private final WebClient webClient;
 
     public GatewayClient of(UUID serverId) {
-        return cache.computeIfAbsent(serverId, _id -> new GatewayClient(serverId, envConfig, webClient));
+        return cache.computeIfAbsent(serverId, _id -> new GatewayClient(serverId, envConfig));
     }
 
     @RequiredArgsConstructor
@@ -58,7 +56,6 @@ public class GatewayService {
         @Getter
         private final UUID id;
         private final EnvConfig envConfig;
-        private final WebClient defaultWebClient;
 
         @Getter
         private final Backend backend;
@@ -66,10 +63,9 @@ public class GatewayService {
         @Getter
         private final Server server;
 
-        public GatewayClient(UUID id, EnvConfig envConfig, WebClient webClient) {
+        public GatewayClient(UUID id, EnvConfig envConfig) {
             this.id = id;
             this.envConfig = envConfig;
-            this.defaultWebClient = webClient;
 
             this.backend = new Backend();
             this.server = new Server();
@@ -88,8 +84,7 @@ public class GatewayService {
         }
 
         public class Server {
-            private final WebClient webClient = defaultWebClient
-                    .mutate()
+            private final WebClient webClient = WebClient.builder()
                     .baseUrl(URI.create(
                             Config.IS_DEVELOPMENT//
                                     ? "http://localhost:9999/" //
@@ -219,7 +214,7 @@ public class GatewayService {
         }
 
         public class Backend {
-            private final WebClient webClient = defaultWebClient.mutate()
+            private final WebClient webClient = WebClient.builder()
                     .baseUrl(URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/").toString())
                     .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
                     .defaultHeaders(headers -> {
@@ -279,15 +274,14 @@ public class GatewayService {
                         .onErrorComplete();
             }
 
-            public void sendConsole(String console) {
-                webClient.method(HttpMethod.POST)
+            public Mono<Void> sendConsole(String console) {
+                return webClient.method(HttpMethod.POST)
                         .uri("servers/" + id.toString() + "/console")//
                         .bodyValue(new ConsoleMessageDto().setMessage(console).setTimestamp(Instant.now()))//
                         .retrieve()//
                         .bodyToMono(Void.class)//
-                        .doOnError((error) -> log.error("Fail to send to console", error))
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .subscribe();
+                        .doOnError((error) -> log.error("Fail to send to console", error));
+
             }
 
             public Mono<String> translate(String text, String targetLanguage) {
