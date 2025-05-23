@@ -1033,7 +1033,7 @@ public class ServerService {
 
         adapters.put(serverId, callback);
 
-       dockerClient.logContainerCmd(containerId)
+        dockerClient.logContainerCmd(containerId)
                 .withStdOut(true)
                 .withStdErr(true)
                 .withFollowStream(true)
@@ -1046,5 +1046,12 @@ public class ServerService {
     public void removeConsoleStream(UUID serverId) {
         consoleStreams.remove(serverId);
         Optional.ofNullable(streamSubscriptions.remove(serverId)).ifPresent(Disposable::dispose);
+        Optional.ofNullable(adapters.remove(serverId)).ifPresent(t -> {
+            try {
+                t.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 }
