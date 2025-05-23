@@ -976,7 +976,7 @@ public class ServerService {
             public void onNext(Frame frame) {
                 gatewayService.of(serverId)//
                         .getBackend()
-                        .sendConsole(frame.toString())
+                        .sendConsole(new String(frame.getPayload()))
                         .subscribe();
             }
 
