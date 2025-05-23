@@ -2,7 +2,6 @@ package mindustrytool.servermanager.service;
 
 import java.net.URI;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -26,7 +25,6 @@ import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.response.ApiServerDto;
 import mindustrytool.servermanager.types.response.BuildLogDto;
-import mindustrytool.servermanager.types.response.ConsoleMessageDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.PlayerDto;
 import mindustrytool.servermanager.types.response.PlayerInfoDto;
@@ -277,7 +275,7 @@ public class GatewayService {
             public Mono<Void> sendConsole(String console) {
                 return webClient.method(HttpMethod.POST)
                         .uri("servers/" + id.toString() + "/console")//
-                        .bodyValue(new ConsoleMessageDto().setMessage(console).setTimestamp(Instant.now()))//
+                        .bodyValue(console)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
                         .timeout(Duration.ofSeconds(3))
