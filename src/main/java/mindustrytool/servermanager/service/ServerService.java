@@ -1005,8 +1005,13 @@ public class ServerService {
         ResultCallback.Adapter<Frame> callback = new ResultCallback.Adapter<>() {
             @Override
             public void onNext(Frame frame) {
-                System.out.println("[" + serverId + "] Log stream: " + new String(frame.getPayload()));
-                sendConsole(serverId, new String(frame.getPayload()));
+                var message = new String(frame.getPayload());
+                if (message.isBlank()) {
+                    return;
+                }
+
+                System.out.println("[" + serverId + "] Log stream: " + message);
+                sendConsole(serverId, message);
             }
 
             @Override
