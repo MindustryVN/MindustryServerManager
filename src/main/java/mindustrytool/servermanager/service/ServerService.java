@@ -68,6 +68,7 @@ import mindustrytool.servermanager.utils.ApiError;
 import mindustrytool.servermanager.utils.Utils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -977,6 +978,7 @@ public class ServerService {
                 gatewayService.of(serverId)//
                         .getBackend()
                         .sendConsole(new String(frame.getPayload()))
+                        .subscribeOn(Schedulers.boundedElastic())
                         .subscribe();
             }
 
@@ -990,6 +992,7 @@ public class ServerService {
             public void onError(Throwable throwable) {
                 System.err
                         .println("[" + serverId + "] Log stream error: " + throwable.getMessage());
+                throwable.printStackTrace();
                 attachedContainers.remove(containerId);
             }
         };
