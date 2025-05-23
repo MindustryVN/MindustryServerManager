@@ -2,6 +2,7 @@ package mindustrytool.servermanager.service;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
@@ -25,6 +26,7 @@ import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.response.ApiServerDto;
 import mindustrytool.servermanager.types.response.BuildLogDto;
+import mindustrytool.servermanager.types.response.ConsoleMessageDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.PlayerDto;
 import mindustrytool.servermanager.types.response.PlayerInfoDto;
@@ -34,6 +36,7 @@ import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -272,14 +275,15 @@ public class GatewayService {
                         .onErrorComplete();
             }
 
-            public Mono<Void> sendConsole(String console) {
-                return webClient.method(HttpMethod.POST)
+            public void sendConsole(String console) {
+                webClient.method(HttpMethod.POST)
                         .uri("servers/" + id.toString() + "/console")//
-                        .bodyValue(console)//
+                        .bodyValue(new ConsoleMessageDto().setMessage(console).setTimestamp(Instant.now()))//
                         .retrieve()//
                         .bodyToMono(Void.class)//
                         .doOnError((error) -> log.error("Fail to send to console", error))
-                        .onErrorComplete();
+                        .subscribeOn(Schedulers.boundedElastic())
+                        .subscribe();
             }
 
             public Mono<String> translate(String text, String targetLanguage) {

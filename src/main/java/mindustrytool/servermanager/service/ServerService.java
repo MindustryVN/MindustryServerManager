@@ -68,7 +68,6 @@ import mindustrytool.servermanager.utils.ApiError;
 import mindustrytool.servermanager.utils.Utils;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -222,21 +221,23 @@ public class ServerService {
 
                                     if (shouldKill) {
                                         if (killFlag) {
-                                            return shutdown(server.getId())//
-                                                    .then(backend.sendConsole(
-                                                            "Auto shut down server: " + server.getId()));
+                                            backend.sendConsole("Auto shut down server: " + server.getId());
+                                            return shutdown(server.getId());
                                         } else {
                                             log.info("Server {} has no players, flag to kill.", server.getId());
                                             serverKillFlags.put(server.getId(), true);
-                                            return backend.sendConsole(
+                                            backend.sendConsole(
                                                     "Server " + server.getId() + " has no players, flag to kill");
+
+                                            return Mono.empty();
                                         }
                                     } else {
                                         if (killFlag) {
                                             serverKillFlags.put(server.getId(), false);
                                             log.info("Remove flag from server {}", server.getId());
-                                            return backend
+                                            backend
                                                     .sendConsole("Remove kill flag from server  " + server.getId());
+                                            return Mono.empty();
                                         }
                                     }
 
@@ -255,8 +256,7 @@ public class ServerService {
                             }
                             dockerClient.removeContainerCmd(container.getId()).exec();
 
-                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash")
-                                    .subscribe();
+                            backend.sendConsole("Remove server " + server.getId() + " due to mismatch version hash");
                         }
                         return Mono.empty();
                     }
@@ -736,8 +736,7 @@ public class ServerService {
                             .each(f -> {
                                 gatewayService.of(serverId)//
                                         .getBackend()
-                                        .sendConsole("Delete old plugin/mod: " + f.name())
-                                        .subscribe();
+                                        .sendConsole("Delete old plugin/mod: " + f.name());
                                 f.delete();
                             });
                 } catch (Exception e) {
@@ -977,9 +976,7 @@ public class ServerService {
             public void onNext(Frame frame) {
                 gatewayService.of(serverId)//
                         .getBackend()
-                        .sendConsole(new String(frame.getPayload()))
-                        .subscribeOn(Schedulers.boundedElastic())
-                        .subscribe();
+                        .sendConsole(new String(frame.getPayload()));
             }
 
             @Override
