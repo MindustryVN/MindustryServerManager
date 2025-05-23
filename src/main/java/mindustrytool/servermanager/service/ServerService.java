@@ -643,6 +643,9 @@ public class ServerService {
             try {
                 var mod = loadMod(modFile);
                 result.add(mod);
+            } catch (ApiError error) {
+                sendConsole(serverId,
+                        "File doesn't have a '[mod/plugin].[h]json' file, delete and skipping: " + modFile.name());
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -682,7 +685,8 @@ public class ServerService {
             ModMeta meta = findMeta(zip);
 
             if (meta == null) {
-                log.warn("Mod @ doesn't have a '[mod/plugin].[h]json' file, skipping.", zip);
+                log.warn("Mod @ doesn't have a '[mod/plugin].[h]json' file, delete and skipping.", zip);
+                sourceFile.delete();
                 throw new ApiError(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid file: No mod.json found.");
             }
 
@@ -704,6 +708,9 @@ public class ServerService {
                             .setSubtitle(meta.subtitle)
                             .setVersion(meta.version));
         } catch (Exception e) {
+            if (e instanceof ApiError) {
+                throw e;
+            }
             // delete root zip file so it can be closed on windows
             if (rootZip != null)
                 rootZip.delete();
