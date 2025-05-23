@@ -121,7 +121,7 @@ public class ServerService {
         }
     }
 
-    @Scheduled(fixedDelay = 3, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.SECONDS)
     private void updateStats() {
         var containers = dockerClient.listContainersCmd()
                 .withShowAll(true)
@@ -177,7 +177,7 @@ public class ServerService {
             float ramMB = memUsage / (1024f * 1024f);
             float totalRamMB = memLimit / (1024f * 1024f);
 
-            stats.put(id, new ContainerStats(cpuPercent, ramMB, totalRamMB));
+            stats.put(id, new ContainerStats(Math.max(cpuPercent, 0), Math.max(ramMB, 0), Math.max(totalRamMB, 0)));
         }
     }
 
