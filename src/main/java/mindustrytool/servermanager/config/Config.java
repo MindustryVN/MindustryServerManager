@@ -19,14 +19,10 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import jakarta.annotation.PostConstruct;
-import reactor.core.scheduler.Scheduler;
-import reactor.core.scheduler.Schedulers;
 
 @Configuration
 @EnableScheduling
 public class Config implements WebFluxConfigurer {
-
-    public static final Scheduler QUEUE_SCHEDULER = Schedulers.newSingle("queue-scheduler");
 
     public static final String ENV = System.getenv("ENV");
 

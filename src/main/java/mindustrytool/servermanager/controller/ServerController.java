@@ -46,6 +46,7 @@ import mindustrytool.servermanager.types.response.ServerFileDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -130,7 +131,7 @@ public class ServerController {
     public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId,
             @Validated @RequestBody HostFromSeverRequest request//
     ) {
-        return serverService.hostFromServer(serverId, request).subscribeOn(Config.QUEUE_SCHEDULER);
+        return serverService.hostFromServer(serverId, request).subscribeOn(Schedulers.single());
     }
 
     @PostMapping("/servers/{id}/set-player")

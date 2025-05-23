@@ -107,7 +107,12 @@ public class ServerService {
                 .exec();
 
         for (var container : containers) {
-            attachToLogs(container.getId());
+            var optional = readMetadataFromContainer(container);
+
+            if (optional.isPresent()) {
+                var metadata = optional.orElseThrow();
+                attachToLogs(container.getId(), metadata.getInit().getId());
+            }
         }
     }
 
@@ -473,7 +478,7 @@ public class ServerService {
 
         var serverGateway = gatewayService.of(request.getInit().getId()).getServer();
 
-        attachToLogs(containerId);
+        attachToLogs(containerId, request.getInit().getId());
 
         return serverGateway//
                 .ok()
@@ -961,7 +966,7 @@ public class ServerService {
         file.delete();
     }
 
-    private synchronized void attachToLogs(String containerId) {
+    private synchronized void attachToLogs(String containerId, UUID serverId) {
         if (!attachedContainers.add(containerId)) {
             return;
         }
@@ -969,19 +974,22 @@ public class ServerService {
         ResultCallback.Adapter<Frame> callback = new ResultCallback.Adapter<>() {
             @Override
             public void onNext(Frame frame) {
-                System.out.print("[" + containerId.substring(0, 12) + "] " + new String(frame.getPayload()));
+                gatewayService.of(serverId)//
+                        .getBackend()
+                        .sendConsole(frame.toString())
+                        .subscribe();
             }
 
             @Override
             public void onComplete() {
-                System.out.println("[" + containerId.substring(0, 12) + "] Log stream ended.");
+                System.out.println("[" + serverId + "] Log stream ended.");
                 attachedContainers.remove(containerId);
             }
 
             @Override
             public void onError(Throwable throwable) {
                 System.err
-                        .println("[" + containerId.substring(0, 12) + "] Log stream error: " + throwable.getMessage());
+                        .println("[" + serverId + "] Log stream error: " + throwable.getMessage());
                 attachedContainers.remove(containerId);
             }
         };

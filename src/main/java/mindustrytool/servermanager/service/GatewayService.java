@@ -3,6 +3,7 @@ package mindustrytool.servermanager.service;
 import java.net.URI;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -41,9 +42,10 @@ import reactor.util.retry.Retry;
 public class GatewayService {
 
     private final EnvConfig envConfig;
-    
+    private final HashMap<UUID, GatewayClient> cache = new HashMap<>();
+
     public GatewayClient of(UUID serverId) {
-        return new GatewayClient(serverId, envConfig);
+        return cache.computeIfAbsent(serverId, _id -> new GatewayClient(serverId, envConfig));
     }
 
     @RequiredArgsConstructor
