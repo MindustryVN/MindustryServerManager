@@ -971,9 +971,10 @@ public class ServerService {
             Sinks.Many<String> newSink = Sinks.many().unicast().onBackpressureBuffer();
 
             Disposable subscription = newSink.asFlux()
-                    .concatMap(msg -> gatewayService.of(serverId)//
+                    .bufferTimeout(10, Duration.ofMillis(100))
+                    .concatMap(batch -> gatewayService.of(serverId)//
                             .getBackend()
-                            .sendConsole(message)) // preserve order
+                            .sendConsole(String.join("\n", batch))) // preserve order
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
                             null,
