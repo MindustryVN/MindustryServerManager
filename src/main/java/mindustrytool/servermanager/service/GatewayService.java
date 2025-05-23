@@ -280,6 +280,7 @@ public class GatewayService {
                         .bodyValue(new ConsoleMessageDto().setMessage(console).setTimestamp(Instant.now()))//
                         .retrieve()//
                         .bodyToMono(Void.class)//
+                        .timeout(Duration.ofSeconds(3))
                         .doOnError((error) -> log.error("Fail to send to console", error));
 
             }
