@@ -997,6 +997,8 @@ public class ServerService {
     }
 
     public void sendConsole(UUID serverId, String message) {
+        System.out.println("[" + serverId + "]: " + message);
+
         Sinks.Many<String> sink = consoleStreams.computeIfAbsent(serverId, id -> {
             Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer();
 
@@ -1041,7 +1043,6 @@ public class ServerService {
                     return;
                 }
 
-                System.out.println("[" + serverId + "] Log stream: " + message);
                 sendConsole(serverId, message);
             }
 
