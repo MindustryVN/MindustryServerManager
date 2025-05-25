@@ -57,6 +57,8 @@ import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerContainerMetadata;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
+import mindustrytool.servermanager.types.response.ManagerMapDto;
+import mindustrytool.servermanager.types.response.ManagerModDto;
 import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.ModDto;
@@ -634,6 +636,80 @@ public class ServerService {
 
     }
 
+    private mindustry.maps.Map readMap(Fi file) {
+        try {
+            return MapIO.createMap(file, true);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new mindustry.maps.Map(file, 0, 0, new StringMap(), true, 0, Version.build);
+        }
+    }
+
+    public Flux<ManagerMapDto> getManagerMaps() {
+        var folder = Paths.get(Config.volumeFolderPath, "servers");
+
+        var result = new HashMap<String, List<UUID>>();
+
+        for (var serverFolder : folder.toFile().listFiles()) {
+            for (var mapFile : new File(serverFolder, "maps").listFiles()) {
+                result.getOrDefault(mapFile.toPath().toString(), new ArrayList<>())
+                        .add(UUID.fromString(serverFolder.getName()));
+            }
+
+        }
+        return Flux.fromIterable(result.entrySet()).map(entry -> {
+            var map = readMap(new Fi(entry.getKey()));
+
+            return new ManagerMapDto()//
+                    .setName(map.name())//
+                    .setFilename(map.file.name())
+                    .setCustom(map.custom)
+                    .setHeight(map.height)
+                    .setServers(entry.getValue())
+                    .setWidth(map.width);
+        });
+    }
+
+    public Flux<ManagerModDto> getManagerMods() {
+        var folder = Paths.get(Config.volumeFolderPath, "servers");
+
+        var result = new HashMap<String, List<UUID>>();
+
+        for (var serverFolder : folder.toFile().listFiles()) {
+            for (var mapFile : new File(serverFolder, "mods").listFiles()) {
+                result.getOrDefault(mapFile.toPath().toString(), new ArrayList<>())
+                        .add(UUID.fromString(serverFolder.getName()));
+            }
+        }
+
+        return Flux.fromIterable(result.entrySet()).flatMap(entry -> {
+            var modFile = new Fi(entry.getKey());
+            try {
+                var meta = loadMod(modFile);
+
+                return Mono.just(new ManagerModDto()//
+                        .setFilename(modFile.name())//
+                        .setName(meta.name)
+                        .setMeta(new ModMetaDto()//
+                                .setAuthor(meta.author)//
+                                .setDependencies(meta.dependencies.list())
+                                .setDescription(meta.description)
+                                .setDisplayName(meta.displayName)
+                                .setHidden(meta.hidden)
+                                .setInternalName(meta.internalName)
+                                .setJava(meta.java)
+                                .setMain(meta.main)
+                                .setMinGameVersion(meta.minGameVersion)
+                                .setName(meta.name)
+                                .setRepo(meta.repo)
+                                .setSubtitle(meta.subtitle)
+                                .setVersion(meta.version)));
+            } catch (Exception e) {
+                return Mono.error(e);
+            }
+        });
+    }
+
     public Flux<MapDto> getMaps(UUID serverId) {
         var folder = getFile(serverId, "maps");
 
@@ -663,8 +739,24 @@ public class ServerService {
         var result = new ArrayList<ModDto>();
         for (var modFile : modFiles) {
             try {
-                var mod = loadMod(modFile);
-                result.add(mod);
+                var meta = loadMod(modFile);
+                result.add(new ModDto()//
+                        .setFilename(modFile.name())//
+                        .setName(meta.name)
+                        .setMeta(new ModMetaDto()//
+                                .setAuthor(meta.author)//
+                                .setDependencies(meta.dependencies.list())
+                                .setDescription(meta.description)
+                                .setDisplayName(meta.displayName)
+                                .setHidden(meta.hidden)
+                                .setInternalName(meta.internalName)
+                                .setJava(meta.java)
+                                .setMain(meta.main)
+                                .setMinGameVersion(meta.minGameVersion)
+                                .setName(meta.name)
+                                .setRepo(meta.repo)
+                                .setSubtitle(meta.subtitle)
+                                .setVersion(meta.version)));
             } catch (ApiError error) {
                 sendConsole(serverId,
                         "File doesn't have a '[mod/plugin].[h]json' file, delete and skipping: " + modFile.name());
@@ -695,7 +787,7 @@ public class ServerService {
         return meta;
     }
 
-    private ModDto loadMod(Fi sourceFile) throws Exception {
+    private ModMeta loadMod(Fi sourceFile) throws Exception {
         ZipFi rootZip = null;
 
         try {
@@ -712,23 +804,7 @@ public class ServerService {
                 throw new ApiError(HttpStatus.UNPROCESSABLE_ENTITY, "Invalid file: No mod.json found.");
             }
 
-            return new ModDto()//
-                    .setFilename(sourceFile.name())//
-                    .setName(meta.name)
-                    .setMeta(new ModMetaDto()//
-                            .setAuthor(meta.author)//
-                            .setDependencies(meta.dependencies.list())
-                            .setDescription(meta.description)
-                            .setDisplayName(meta.displayName)
-                            .setHidden(meta.hidden)
-                            .setInternalName(meta.internalName)
-                            .setJava(meta.java)
-                            .setMain(meta.main)
-                            .setMinGameVersion(meta.minGameVersion)
-                            .setName(meta.name)
-                            .setRepo(meta.repo)
-                            .setSubtitle(meta.subtitle)
-                            .setVersion(meta.version));
+            return meta;
         } catch (Exception e) {
             if (e instanceof ApiError) {
                 throw e;

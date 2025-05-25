@@ -36,6 +36,8 @@ import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.PaginationRequest;
+import mindustrytool.servermanager.types.response.ManagerMapDto;
+import mindustrytool.servermanager.types.response.ManagerModDto;
 import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.ModDto;
@@ -210,6 +212,16 @@ public class ServerController {
     @GetMapping("servers/{id}/routes")
     public Mono<JsonNode> getRoutes(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getRoutes();
+    }
+
+    @GetMapping("mods")
+    public Flux<ManagerModDto> getManagerMods() {
+        return serverService.getManagerMods();
+    }
+
+    @GetMapping("maps")
+    public Flux<ManagerMapDto> getManagerMaps() {
+        return serverService.getManagerMaps();
     }
 
 }
