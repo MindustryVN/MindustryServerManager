@@ -650,12 +650,11 @@ public class ServerService {
 
         var result = new HashMap<String, List<UUID>>();
 
-        for (var serverFolder : folder.toFile().listFiles()) {
-            for (var mapFile : new File(serverFolder, "/config/maps").listFiles()) {
-                result.getOrDefault(mapFile.toPath().toString(), new ArrayList<>())
-                        .add(UUID.fromString(serverFolder.getName()));
+        for (var serverFolder : new Fi(folder.toString()).list()) {
+            for (var mapFile : serverFolder.child("config").child("maps").list()) {
+                result.getOrDefault(mapFile.path(), new ArrayList<>())
+                        .add(UUID.fromString(serverFolder.name()));
             }
-
         }
         return Flux.fromIterable(result.entrySet()).map(entry -> {
             var map = readMap(new Fi(entry.getKey()));
@@ -675,10 +674,10 @@ public class ServerService {
 
         var result = new HashMap<String, List<UUID>>();
 
-        for (var serverFolder : folder.toFile().listFiles()) {
-            for (var mapFile : new File(serverFolder, "/config/mods").listFiles()) {
-                result.getOrDefault(mapFile.toPath().toString(), new ArrayList<>())
-                        .add(UUID.fromString(serverFolder.getName()));
+        for (var serverFolder : new Fi(folder.toString()).list()) {
+            for (var mapFile : serverFolder.child("config").child("mods").list()) {
+                result.getOrDefault(mapFile.path(), new ArrayList<>())
+                        .add(UUID.fromString(serverFolder.name()));
             }
         }
 
