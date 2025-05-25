@@ -651,7 +651,7 @@ public class ServerService {
         var result = new HashMap<String, List<UUID>>();
 
         for (var serverFolder : folder.toFile().listFiles()) {
-            for (var mapFile : new File(serverFolder, "maps").listFiles()) {
+            for (var mapFile : new File(serverFolder, "/config/maps").listFiles()) {
                 result.getOrDefault(mapFile.toPath().toString(), new ArrayList<>())
                         .add(UUID.fromString(serverFolder.getName()));
             }
@@ -676,7 +676,7 @@ public class ServerService {
         var result = new HashMap<String, List<UUID>>();
 
         for (var serverFolder : folder.toFile().listFiles()) {
-            for (var mapFile : new File(serverFolder, "mods").listFiles()) {
+            for (var mapFile : new File(serverFolder, "/config/mods").listFiles()) {
                 result.getOrDefault(mapFile.toPath().toString(), new ArrayList<>())
                         .add(UUID.fromString(serverFolder.getName()));
             }
