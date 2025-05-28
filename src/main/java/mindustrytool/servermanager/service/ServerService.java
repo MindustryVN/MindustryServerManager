@@ -655,7 +655,19 @@ public class ServerService {
         var result = new HashMap<String, List<UUID>>();
 
         for (var serverFolder : new Fi(folder.toString()).list()) {
-            for (var mapFile : serverFolder.child("config").child("maps").list()) {
+            var configFolder = serverFolder.child("config");
+
+            if (!configFolder.exists()) {
+                continue;
+            }
+
+            var mapFolder = configFolder.child("maps");
+
+            if (!mapFolder.exists()) {
+                continue;
+            }
+
+            for (var mapFile : mapFolder.list()) {
                 result.getOrDefault(mapFile.path(), new ArrayList<>())
                         .add(UUID.fromString(serverFolder.name()));
             }
@@ -683,7 +695,18 @@ public class ServerService {
         var result = new HashMap<String, List<UUID>>();
 
         for (var serverFolder : new Fi(folder.toString()).list()) {
-            for (var mapFile : serverFolder.child("config").child("mods").list()) {
+            var configFolder = serverFolder.child("config");
+
+            if (!configFolder.exists()) {
+                continue;
+            }
+
+            var modFolder = configFolder.child("mods");
+
+            if (!modFolder.exists()) {
+                continue;
+            }
+            for (var mapFile : modFolder.list()) {
                 result.getOrDefault(mapFile.path(), new ArrayList<>())
                         .add(UUID.fromString(serverFolder.name()));
             }
