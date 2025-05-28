@@ -648,6 +648,10 @@ public class ServerService {
     public Flux<ManagerMapDto> getManagerMaps() {
         var folder = Paths.get(Config.volumeFolderPath, "servers");
 
+        if (!folder.toFile().exists()) {
+            return Flux.empty();
+        }
+
         var result = new HashMap<String, List<UUID>>();
 
         for (var serverFolder : new Fi(folder.toString()).list()) {
@@ -671,6 +675,10 @@ public class ServerService {
 
     public Flux<ManagerModDto> getManagerMods() {
         var folder = Paths.get(Config.volumeFolderPath, "servers");
+
+        if (!folder.toFile().exists()) {
+            return Flux.empty();
+        }
 
         var result = new HashMap<String, List<UUID>>();
 
@@ -704,13 +712,18 @@ public class ServerService {
                                 .setSubtitle(meta.subtitle)
                                 .setVersion(meta.version)));
             } catch (Exception e) {
-                return Mono.error(e);
+                e.printStackTrace();
+                return Mono.empty();
             }
         });
     }
 
     public Flux<MapDto> getMaps(UUID serverId) {
         var folder = getFile(serverId, "maps");
+
+        if (!folder.exists()) {
+            return Flux.empty();
+        }
 
         var maps = new Fi(folder).findAll()
                 .map(file -> {
@@ -733,6 +746,11 @@ public class ServerService {
 
     public Flux<ModDto> getMods(UUID serverId) {
         var folder = getFile(serverId, "mods");
+
+        if (!folder.exists()) {
+            return Flux.empty();
+        }
+
         var modFiles = new Fi(folder).findAll();
 
         var result = new ArrayList<ModDto>();
