@@ -646,15 +646,15 @@ public class ServerService {
     }
 
     public Flux<ManagerMapDto> getManagerMaps() {
-        var folder = Paths.get(Config.volumeFolderPath, "servers");
-
-        if (!folder.toFile().exists()) {
+        var folder = Paths.get(Config.volumeFolderPath, "servers").toFile();
+        
+        if (!folder.exists()) {
             return Flux.empty();
         }
 
         var result = new HashMap<String, List<UUID>>();
 
-        for (var serverFolder : new Fi(folder.toString()).list()) {
+        for (var serverFolder : new Fi(folder).list()) {
             var configFolder = serverFolder.child("config");
 
             if (!configFolder.exists()) {
@@ -686,15 +686,15 @@ public class ServerService {
     }
 
     public Flux<ManagerModDto> getManagerMods() {
-        var folder = Paths.get(Config.volumeFolderPath, "servers");
+        var folder = Paths.get(Config.volumeFolderPath, "servers").toFile();
 
-        if (!folder.toFile().exists()) {
+        if (!folder.exists()) {
             return Flux.empty();
         }
 
         var result = new HashMap<String, List<UUID>>();
 
-        for (var serverFolder : new Fi(folder.toString()).list()) {
+        for (var serverFolder : new Fi(folder).list()) {
             var configFolder = serverFolder.child("config");
 
             if (!configFolder.exists()) {
@@ -706,6 +706,7 @@ public class ServerService {
             if (!modFolder.exists()) {
                 continue;
             }
+
             for (var mapFile : modFolder.list()) {
                 result.getOrDefault(mapFile.path(), new ArrayList<>())
                         .add(UUID.fromString(serverFolder.name()));
@@ -774,7 +775,8 @@ public class ServerService {
             return Flux.empty();
         }
 
-        var modFiles = new Fi(folder).findAll();
+        var modFiles = new Fi(folder).findAll(file -> file.extension().equalsIgnoreCase("jar") || file.extension()
+                .equalsIgnoreCase("zip"));
 
         var result = new ArrayList<ModDto>();
         for (var modFile : modFiles) {
