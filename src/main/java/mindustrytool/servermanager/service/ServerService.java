@@ -657,30 +657,25 @@ public class ServerService {
         for (var serverFolder : new Fi(folder).list()) {
             var configFolder = serverFolder.child("config");
 
-            System.out.println(configFolder.path() + " exists: " + configFolder.exists());
-
             if (!configFolder.exists()) {
                 continue;
             }
 
             var mapFolder = configFolder.child("maps");
 
-            System.out.println(mapFolder.path() + " exists: " + mapFolder.exists());
-
             if (!mapFolder.exists()) {
                 continue;
             }
 
             for (var mapFile : mapFolder.list(file -> file.getName().endsWith(".msav"))) {
-                System.out.println(mapFile.path() + " exists: " + mapFile.exists());
-                result.getOrDefault(mapFile.path(), new ArrayList<>())
+                result.computeIfAbsent(mapFile.path(), (_ignore) -> new ArrayList<>())
                         .add(UUID.fromString(serverFolder.name()));
             }
         }
         return Flux.fromIterable(result.entrySet()).map(entry -> {
             var map = readMap(new Fi(entry.getKey()));
 
-            System.out.println(map.name() + " servers: "  + entry.getValue());
+            System.out.println(map.name() + " servers: " + entry.getValue());
 
             return new ManagerMapDto()//
                     .setName(map.name())//
@@ -716,7 +711,7 @@ public class ServerService {
 
             for (var mapFile : modFolder
                     .list(file -> file.getName().endsWith(".zip") || file.getName().endsWith(".jar"))) {
-                result.getOrDefault(mapFile.path(), new ArrayList<>())
+                result.computeIfAbsent(mapFile.path(), (_ignore) -> new ArrayList<>())
                         .add(UUID.fromString(serverFolder.name()));
             }
         }
