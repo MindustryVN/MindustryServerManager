@@ -271,7 +271,7 @@ public class ServerService {
                                     if (shouldKill) {
                                         if (killFlag) {
                                             sendConsole(server.getId(), "Auto shut down server: " + server.getId());
-                                            return shutdown(server.getId());
+                                            return remove(server.getId());
                                         } else {
                                             log.info("Server {} has no players, flag to kill.", server.getId());
                                             serverKillFlags.put(server.getId(), true);
@@ -293,8 +293,7 @@ public class ServerService {
                                     return Mono.empty();
                                 })//
                                 .retry(5)//
-                                .doOnError(_ignore -> sendConsole(server.getId(),
-                                        "Server not response, auto shutdown: " + server.getId()))
+                                .doOnError(error -> sendConsole(server.getId(), "Error: " + error.getMessage()))
                                 .onErrorComplete();
                     } else {
                         if (!isSameManagerHash || !isSameServerHash) {
