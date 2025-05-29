@@ -387,8 +387,9 @@ public class ServerService {
                 .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
                 .map(server -> server.getInit())//
                 .flatMap(server -> stats(server.getId())//
-                        .map(stats -> modelMapper.map(server, ServerWithStatsDto.class).setUsage(stats)
-                                .setStatus(stats.status))//
+                        .map(stats -> modelMapper.map(server, ServerWithStatsDto.class)//
+                                .setUsage(stats)
+                                .setStatus(stats.getStatus()))//
                         .onErrorResume(error -> {
                             error.printStackTrace();
                             return Mono
