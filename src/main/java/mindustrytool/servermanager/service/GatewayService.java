@@ -109,6 +109,15 @@ public class GatewayService {
                         .then();
             }
 
+            public Mono<Void> pause() {
+                return webClient.method(HttpMethod.POST)//
+                        .uri("pause")//
+                        .retrieve()//
+                        .bodyToMono(Void.class)//
+                        .timeout(Duration.ofSeconds(5))//
+                        .then();
+            }
+
             public Flux<Player> getPlayers() {
                 return webClient.method(HttpMethod.GET)//
                         .uri("players")//

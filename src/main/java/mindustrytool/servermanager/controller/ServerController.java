@@ -146,14 +146,19 @@ public class ServerController {
         return serverService.stats(serverId);
     }
 
-    @GetMapping("/servers/{id}/shutdown")
+    @PutMapping("/servers/{id}/shutdown")
     public Mono<Void> shutdown(@PathVariable("id") UUID serverId) {
         return serverService.shutdown(serverId);
     }
 
-    @GetMapping("/servers/{id}/remove")
+    @DeleteMapping("/servers/{id}/remove")
     public Mono<Void> remove(@PathVariable("id") UUID serverId) {
         return serverService.remove(serverId);
+    }
+
+    @PostMapping("/servers/{id}/pause")
+    public Mono<Void> pause(@PathVariable("id") UUID serverId) {
+        return serverService.pause(serverId);
     }
 
     @GetMapping("/servers/{id}/detail-stats")

@@ -377,6 +377,13 @@ public class ServerService {
         return syncStats(serverId);
     }
 
+    public Mono<Void> pause(UUID serverId) {
+        return gatewayService.of(serverId)//
+                .getServer()//
+                .pause()//
+                .then(syncStats(serverId));
+    }
+
     public Flux<ServerWithStatsDto> getServers() {
         var containers = dockerClient.listContainersCmd()//
                 .withShowAll(true)//
