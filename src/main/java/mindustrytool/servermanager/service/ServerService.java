@@ -308,8 +308,7 @@ public class ServerService {
                         return Mono.empty();
                     }
                 })//
-                .subscribeOn(Schedulers.single())
-                .subscribe();
+                .blockLast();
     }
 
     public Mono<Long> getTotalPlayers() {
