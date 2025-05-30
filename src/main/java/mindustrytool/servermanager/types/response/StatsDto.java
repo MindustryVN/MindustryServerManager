@@ -15,7 +15,7 @@ public class StatsDto {
     private long players = 0;
     private String mapName = "";
     private byte[] mapData;
-    private List<String> mods = new ArrayList<>();
+    private List<ModDto> mods = new ArrayList<>();
     private int kicks;
     private boolean isPaused = false;
     private String status = "UNSET";
