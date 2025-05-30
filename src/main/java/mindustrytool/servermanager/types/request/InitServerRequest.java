@@ -14,10 +14,8 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class InitServerRequest {
 
-    @NotEmpty
     private UUID id;
 
-    @NotEmpty
     private UUID userId;
 
     @NotEmpty
