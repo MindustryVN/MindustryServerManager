@@ -11,6 +11,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -156,6 +157,7 @@ public class GatewayService {
             public Mono<byte[]> getImage() {
                 return webClient.method(HttpMethod.GET)
                         .uri("image")
+                        .accept(MediaType.IMAGE_PNG)
                         .retrieve()//
                         .bodyToMono(byte[].class)//
                         .timeout(Duration.ofSeconds(5));

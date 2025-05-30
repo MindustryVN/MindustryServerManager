@@ -161,7 +161,7 @@ public class ServerController {
         return serverService.pause(serverId);
     }
 
-    @GetMapping("/servers/{id}/image")
+    @GetMapping(path = "/servers/{id}/image", produces = MediaType.IMAGE_PNG_VALUE)
     public Mono<byte[]> image(@PathVariable("id") UUID serverId) {
         return serverService.getImage(serverId);
     }
