@@ -699,7 +699,7 @@ public class ServerService {
                 result.add("Port mismatch\ncurrent: " + meta.getInit().getPort() + "\nexpected: " + init.getPort());
             }
 
-            if (init.getHostCommand().equals(meta.getInit().getHostCommand())) {
+            if (!init.getHostCommand().equals(meta.getInit().getHostCommand())) {
                 result.add("Host command mismatch\ncurrent: " + meta.getInit().getHostCommand() + "\nexpected: "
                         + init.getHostCommand());
             }
