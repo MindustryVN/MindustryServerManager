@@ -91,6 +91,14 @@ public class GatewayService {
                     .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
                     .build();
 
+            public Mono<JsonNode> getJson() {
+                return webClient.method(HttpMethod.GET)//
+                        .uri("json")//
+                        .retrieve()//
+                        .bodyToMono(JsonNode.class)//
+                        .timeout(Duration.ofSeconds(15));
+            }
+
             public Mono<String> getPluginVersion() {
                 return webClient.method(HttpMethod.GET)//
                         .uri("plugin-version")//

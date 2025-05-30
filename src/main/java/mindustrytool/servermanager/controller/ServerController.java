@@ -214,6 +214,11 @@ public class ServerController {
         return Config.MANAGER_VERSION;
     }
 
+    @GetMapping("servers/{id}/json")
+    public Mono<JsonNode> getJson(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getJson();
+    }
+
     @GetMapping("servers/{id}/routes")
     public Mono<JsonNode> getRoutes(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getRoutes();
