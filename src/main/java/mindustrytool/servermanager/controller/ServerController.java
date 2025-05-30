@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -35,6 +36,7 @@ import mindustrytool.servermanager.service.ServerService;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.HostServerRequest;
+import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.request.PaginationRequest;
 import mindustrytool.servermanager.types.response.ManagerMapDto;
 import mindustrytool.servermanager.types.response.ManagerModDto;
@@ -222,6 +224,14 @@ public class ServerController {
     @GetMapping("servers/{id}/routes")
     public Mono<JsonNode> getRoutes(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getRoutes();
+    }
+
+    @PostMapping("servers/{id}/mismatch")
+    public Mono<List<String>> getMismatch(//
+            @PathVariable("id") UUID serverId,
+            @Validated @RequestBody InitServerRequest init//
+    ) {
+        return serverService.getMismatch(serverId, init);
     }
 
     @GetMapping("mods")

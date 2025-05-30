@@ -53,6 +53,7 @@ import mindustry.mod.Mods.ModMeta;
 import mindustrytool.servermanager.EnvConfig;
 import mindustrytool.servermanager.config.Config;
 import mindustrytool.servermanager.types.request.HostServerRequest;
+import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerContainerMetadata;
@@ -632,6 +633,79 @@ public class ServerService {
         dockerClient.startContainerCmd(containerId).exec();
 
         return containerId;
+    }
+
+    public Mono<List<String>> getMismatch(UUID serverId, InitServerRequest init) {
+        var container = findContainerByServerId(serverId);
+
+        if (container == null) {
+            return Mono.empty();
+        }
+
+        return Mono.zipDelayError(stats(serverId), getMods(serverId).collectList()).map(zip -> {
+            var stats = zip.getT1();
+            var mods = zip.getT2();
+            List<String> result = new ArrayList<>();
+
+            var meta = readMetadataFromContainer(container).orElseThrow();
+            var serverImage = dockerClient.inspectImageCmd(meta.getInit().getImage()).exec();
+
+            if (!meta.getServerImageHash().equals(serverImage.getId())) {
+                result.add("Server image mismatch, current: " + serverImage.getId() + ", expected: "
+                        + meta.getServerImageHash());
+            }
+
+            for (var mod : mods) {
+                if (stats.getMods().stream()
+                        .noneMatch(runningMod -> runningMod.getFilename().equals(mod.getFilename()))) {
+                    result.add("Mod " + mod.getFilename() + " is not loaded");
+                }
+            }
+
+            for (var runningMod : stats.getMods()) {
+                if (mods.stream()
+                        .noneMatch(mod -> mod.getFilename().equals(runningMod.getFilename()))) {
+                    result.add("Mod " + runningMod.getFilename() + " is removed");
+                }
+            }
+
+            if (init.isAutoTurnOff() != meta.getInit().isAutoTurnOff()) {
+                result.add("Auto turn off mismatch, current: " + meta.getInit().isAutoTurnOff() + ", expected: "
+                        + init.isAutoTurnOff());
+            }
+
+            if (!init.getMode().equals(meta.getInit().getMode())) {
+                result.add("Mode mismatch, current: " + meta.getInit().getMode() + ", expected: " + init.getMode());
+            }
+
+            if (init.getImage() != meta.getInit().getImage()) {
+                result.add("Image mismatch, current: " + meta.getInit().getImage() + ", expected: " + init.getImage());
+            }
+
+            for (var entry : init.getEnv().entrySet()) {
+                if (!meta.getInit().getEnv().containsKey(entry.getKey())) {
+                    result.add("Env " + entry.getKey() + " is not set");
+                } else if (!meta.getInit().getEnv().get(entry.getKey()).equals(entry.getValue())) {
+                    result.add("Env " + entry.getKey() + " mismatch, current: "
+                            + meta.getInit().getEnv().get(entry.getKey()) + ", expected: " + entry.getValue());
+                }
+            }
+
+            if (init.isHub() != meta.getInit().isHub()) {
+                result.add("Hub mismatch, current: " + meta.getInit().isHub() + ", expected: " + init.isHub());
+            }
+
+            if (init.getPort() != meta.getInit().getPort()) {
+                result.add("Port mismatch, current: " + meta.getInit().getPort() + ", expected: " + init.getPort());
+            }
+
+            if (init.getHostCommand().equals(meta.getInit().getHostCommand())) {
+                result.add("Host command mismatch, current: " + meta.getInit().getHostCommand() + ", expected: "
+                        + init.getHostCommand());
+            }
+
+            return result;
+        });
     }
 
     public File getFile(UUID serverId, String path) {
