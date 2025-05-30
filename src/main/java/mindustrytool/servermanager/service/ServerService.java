@@ -365,6 +365,11 @@ public class ServerService {
     public Mono<Void> remove(UUID serverId) {
         var container = findContainerByServerId(serverId);
 
+        if (container == null) {
+            log.info("Container not found: " + serverId);
+            return Mono.empty();
+        }
+
         log.info("Found %s container to stop".formatted(container.getId()));
 
         if (container.getState().equalsIgnoreCase("running")) {
