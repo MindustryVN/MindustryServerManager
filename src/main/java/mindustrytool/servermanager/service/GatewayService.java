@@ -145,11 +145,11 @@ public class GatewayService {
                         .timeout(Duration.ofSeconds(5));
             }
 
-            public Mono<StatsDto> getDetailStats() {
+            public Mono<byte[]> getImage() {
                 return webClient.method(HttpMethod.GET)
-                        .uri("detail-stats")
+                        .uri("image")
                         .retrieve()//
-                        .bodyToMono(StatsDto.class)//
+                        .bodyToMono(byte[].class)//
                         .timeout(Duration.ofSeconds(5));
             }
 

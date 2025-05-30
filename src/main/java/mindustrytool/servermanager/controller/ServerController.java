@@ -161,9 +161,9 @@ public class ServerController {
         return serverService.pause(serverId);
     }
 
-    @GetMapping("/servers/{id}/detail-stats")
-    public Mono<StatsDto> detailStats(@PathVariable("id") UUID serverId) {
-        return serverService.detailStats(serverId);
+    @GetMapping("/servers/{id}/image")
+    public Mono<byte[]> image(@PathVariable("id") UUID serverId) {
+        return serverService.getImage(serverId);
     }
 
     @GetMapping("/servers/{id}/ok")

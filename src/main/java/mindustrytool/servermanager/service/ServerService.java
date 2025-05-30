@@ -1048,39 +1048,10 @@ public class ServerService {
                 });
     }
 
-    public Mono<StatsDto> detailStats(UUID serverId) {
-        var container = findContainerByServerId(serverId);
-
-        if (container == null) {
-            return Mono.just(new StatsDto().setStatus("DELETED"));
-        }
-
-        if (!container.getState().equalsIgnoreCase("running")) {
-            return Mono.just(new StatsDto().setStatus("DOWN"));
-        }
-
+    public Mono<byte[]> getImage(UUID serverId) {
         return gatewayService.of(serverId)//
                 .getServer()//
-                .getDetailStats()//
-                .defaultIfEmpty(new StatsDto().setStatus(container == null //
-                        ? "DELETED"
-                        : container//
-                                .getState()//
-                                .equalsIgnoreCase("running")//
-                                        ? "NOT_RESPONSE"
-                                        : "DOWN"))
-                .map(serverStats -> {
-                    var containerStats = stats.get(serverId);
-
-                    if (containerStats != null) {
-                        serverStats.setCpuUsage(containerStats.cpuUsage())//
-                                .setTotalRam(containerStats.totalRam())//
-                                .setRamUsage(containerStats.ramUsage());
-                    }
-
-                    return serverStats;
-                });
-
+                .getImage();
     }
 
     public Mono<Void> setPlayer(UUID serverId, MindustryPlayerDto payload) {
