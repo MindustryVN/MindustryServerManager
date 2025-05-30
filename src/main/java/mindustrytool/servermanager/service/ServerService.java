@@ -651,7 +651,7 @@ public class ServerService {
             var serverImage = dockerClient.inspectImageCmd(meta.getInit().getImage()).exec();
 
             if (!meta.getServerImageHash().equals(serverImage.getId())) {
-                result.add("Server image mismatch, current: " + serverImage.getId() + ", expected: "
+                result.add("Server image mismatch, \ncurrent: " + serverImage.getId() + "\nexpected: "
                         + meta.getServerImageHash());
             }
 
@@ -670,37 +670,37 @@ public class ServerService {
             }
 
             if (init.isAutoTurnOff() != meta.getInit().isAutoTurnOff()) {
-                result.add("Auto turn off mismatch, current: " + meta.getInit().isAutoTurnOff() + ", expected: "
+                result.add("Auto turn off mismatch\ncurrent: " + meta.getInit().isAutoTurnOff() + "\nexpected: "
                         + init.isAutoTurnOff());
             }
 
             if (!init.getMode().equals(meta.getInit().getMode())) {
-                result.add("Mode mismatch, current: " + meta.getInit().getMode() + ", expected: " + init.getMode());
+                result.add("Mode mismatch\ncurrent: " + meta.getInit().getMode() + "\nexpected: " + init.getMode());
             }
 
             if (!init.getImage().equals(meta.getInit().getImage())) {
-                result.add("Image mismatch, current: " + meta.getInit().getImage() + ", expected: " + init.getImage());
+                result.add("Image mismatch\ncurrent: " + meta.getInit().getImage() + "\nexpected: " + init.getImage());
             }
 
             for (var entry : init.getEnv().entrySet()) {
                 if (!meta.getInit().getEnv().containsKey(entry.getKey())) {
                     result.add("Env " + entry.getKey() + " is not set");
                 } else if (!meta.getInit().getEnv().get(entry.getKey()).equals(entry.getValue())) {
-                    result.add("Env " + entry.getKey() + " mismatch, current: "
-                            + meta.getInit().getEnv().get(entry.getKey()) + ", expected: " + entry.getValue());
+                    result.add("Env " + entry.getKey() + " mismatch\ncurrent: "
+                            + meta.getInit().getEnv().get(entry.getKey()) + "\nexpected: " + entry.getValue());
                 }
             }
 
             if (init.isHub() != meta.getInit().isHub()) {
-                result.add("Hub mismatch, current: " + meta.getInit().isHub() + ", expected: " + init.isHub());
+                result.add("Hub mismatch\ncurrent: " + meta.getInit().isHub() + "\nexpected: " + init.isHub());
             }
 
             if (init.getPort() != meta.getInit().getPort()) {
-                result.add("Port mismatch, current: " + meta.getInit().getPort() + ", expected: " + init.getPort());
+                result.add("Port mismatch\ncurrent: " + meta.getInit().getPort() + "\nexpected: " + init.getPort());
             }
 
             if (init.getHostCommand().equals(meta.getInit().getHostCommand())) {
-                result.add("Host command mismatch, current: " + meta.getInit().getHostCommand() + ", expected: "
+                result.add("Host command mismatch\ncurrent: " + meta.getInit().getHostCommand() + "\nexpected: "
                         + init.getHostCommand());
             }
 
