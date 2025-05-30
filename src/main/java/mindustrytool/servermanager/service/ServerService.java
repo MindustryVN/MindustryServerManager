@@ -678,7 +678,7 @@ public class ServerService {
                 result.add("Mode mismatch, current: " + meta.getInit().getMode() + ", expected: " + init.getMode());
             }
 
-            if (init.getImage() != meta.getInit().getImage()) {
+            if (!init.getImage().equals(meta.getInit().getImage())) {
                 result.add("Image mismatch, current: " + meta.getInit().getImage() + ", expected: " + init.getImage());
             }
 
