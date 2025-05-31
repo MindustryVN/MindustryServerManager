@@ -75,6 +75,8 @@ import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.publisher.Sinks.EmitResult;
 import reactor.core.scheduler.Schedulers;
+import reactor.util.function.Tuple2;
+import reactor.util.function.Tuples;
 import reactor.util.retry.Retry;
 
 @Slf4j
@@ -737,7 +739,7 @@ public class ServerService {
             return Flux.empty();
         }
 
-        var result = new HashMap<String, List<UUID>>();
+        var result = new HashMap<String, Tuple2<Fi, List<UUID>>>();
 
         for (var serverFolder : new Fi(folder).list()) {
             var configFolder = serverFolder.child("config");
@@ -753,21 +755,20 @@ public class ServerService {
             }
 
             for (var mapFile : mapFolder.list(file -> file.getName().endsWith(".msav"))) {
-                result.computeIfAbsent(mapFile.path(), (_ignore) -> new ArrayList<>())
+                result.computeIfAbsent(mapFile.name(), (_ignore) -> Tuples.of(mapFile, new ArrayList<>()))
+                        .getT2()
                         .add(UUID.fromString(serverFolder.name()));
             }
         }
-        return Flux.fromIterable(result.entrySet()).map(entry -> {
-            var map = readMap(new Fi(entry.getKey()));
-
-            System.out.println(map.name() + " servers: " + entry.getValue());
+        return Flux.fromIterable(result.values()).map(entry -> {
+            var map = readMap(entry.getT1());
 
             return new ManagerMapDto()//
                     .setName(map.name())//
                     .setFilename(map.file.name())
                     .setCustom(map.custom)
                     .setHeight(map.height)
-                    .setServers(entry.getValue())
+                    .setServers(entry.getT2())
                     .setWidth(map.width);
         });
     }
@@ -779,7 +780,7 @@ public class ServerService {
             return Flux.empty();
         }
 
-        var result = new HashMap<String, List<UUID>>();
+        var result = new HashMap<String, Tuple2<Fi, List<UUID>>>();
 
         for (var serverFolder : new Fi(folder).list()) {
             var configFolder = serverFolder.child("config");
@@ -796,19 +797,20 @@ public class ServerService {
 
             for (var mapFile : modFolder
                     .list(file -> file.getName().endsWith(".zip") || file.getName().endsWith(".jar"))) {
-                result.computeIfAbsent(mapFile.path(), (_ignore) -> new ArrayList<>())
+                result.computeIfAbsent(mapFile.name(), (_ignore) -> Tuples.of(mapFile, new ArrayList<>()))
+                        .getT2()
                         .add(UUID.fromString(serverFolder.name()));
             }
         }
 
-        return Flux.fromIterable(result.entrySet()).flatMap(entry -> {
-            var modFile = new Fi(entry.getKey());
+        return Flux.fromIterable(result.values()).flatMap(entry -> {
             try {
-                var meta = loadMod(modFile);
+                var meta = loadMod(entry.getT1());
 
                 return Mono.just(new ManagerModDto()//
-                        .setFilename(modFile.name())//
+                        .setFilename(entry.getT1().name())//
                         .setName(meta.name)
+                        .setServers(entry.getT2())//
                         .setMeta(new ModMetaDto()//
                                 .setAuthor(meta.author)//
                                 .setDependencies(meta.dependencies.list())
