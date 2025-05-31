@@ -832,6 +832,63 @@ public class ServerService {
         });
     }
 
+    public void deleteManagerMap(String filename) {
+        var folder = Paths.get(Config.volumeFolderPath, "servers").toFile();
+
+        if (!folder.exists()) {
+            return;
+        }
+
+        for (var serverFolder : new Fi(folder).list()) {
+            var configFolder = serverFolder.child("config");
+
+            if (!configFolder.exists()) {
+                continue;
+            }
+
+            var mapFolder = configFolder.child("maps");
+
+            if (!mapFolder.exists()) {
+                continue;
+            }
+
+            var mapFile = mapFolder.child(filename);
+
+            if (mapFile.exists()) {
+                mapFile.delete();
+            }
+        }
+    }
+
+    public void deleteManagerMod(String filename) {
+        var folder = Paths.get(Config.volumeFolderPath, "servers").toFile();
+
+        if (!folder.exists()) {
+            return;
+        }
+
+        for (var serverFolder : new Fi(folder).list()) {
+            var configFolder = serverFolder.child("config");
+
+            if (!configFolder.exists()) {
+                continue;
+            }
+            var modFolder = configFolder.child("mods");
+
+            if (!modFolder.exists()) {
+                continue;
+            }
+
+            var modFile = modFolder.child(filename);
+
+            if (modFile.exists()) {
+                modFile.delete();
+            }
+        }
+    }
+
+
+
     public Flux<MapDto> getMaps(UUID serverId) {
         var folder = getFile(serverId, "maps");
 

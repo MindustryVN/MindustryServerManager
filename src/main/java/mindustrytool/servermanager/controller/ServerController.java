@@ -244,4 +244,14 @@ public class ServerController {
         return serverService.getManagerMaps();
     }
 
+    @DeleteMapping("maps/{filename}")
+    public void deleteManagerMap(@PathVariable("filename") String filename) {
+        serverService.deleteManagerMap(filename);
+    }
+
+    @DeleteMapping("mods/{filename}")
+    public void deleteManagerMod(@PathVariable("filename") String filename) {
+        serverService.deleteManagerMod(filename);
+    }
+
 }
