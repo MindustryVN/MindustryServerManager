@@ -663,7 +663,7 @@ public class ServerService {
             var serverImage = dockerClient.inspectImageCmd(meta.getInit().getImage()).exec();
 
             if (!meta.getServerImageHash().equals(serverImage.getId())) {
-                result.add("Server image mismatch, \ncurrent: " + serverImage.getId() + "\nexpected: "
+                result.add("Server image outdated, \ncurrent: " + serverImage.getId() + "\nexpected: "
                         + meta.getServerImageHash());
             }
 
@@ -691,7 +691,7 @@ public class ServerService {
             }
 
             if (!init.getImage().equals(meta.getInit().getImage())) {
-                result.add("Image mismatch\ncurrent: " + meta.getInit().getImage() + "\nexpected: " + init.getImage());
+                result.add("Image outdated\ncurrent: " + meta.getInit().getImage() + "\nexpected: " + init.getImage());
             }
 
             for (var entry : init.getEnv().entrySet()) {
