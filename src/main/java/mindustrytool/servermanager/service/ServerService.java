@@ -33,6 +33,7 @@ import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
 import com.github.dockerjava.api.model.Ports;
+import com.github.dockerjava.api.model.PullResponseItem;
 import com.github.dockerjava.api.model.RestartPolicy;
 import com.github.dockerjava.api.model.Statistics;
 import com.github.dockerjava.api.model.Volume;
@@ -550,6 +551,16 @@ public class ServerService {
     }
 
     private String createNewServerContainer(HostFromSeverRequest request) {
+
+        dockerClient.pullImageCmd(request.getInit().getImage())//
+                .exec(new ResultCallback.Adapter<PullResponseItem>() {
+                    @Override
+                    public void onError(Throwable throwable) {
+                        throwable.printStackTrace();
+                        sendConsole(request.getInit().getId(), throwable.getMessage());
+                    }
+                });
+
         String serverId = request.getInit().getId().toString();
         String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath()
                 .toString();
