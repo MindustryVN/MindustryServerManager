@@ -173,6 +173,16 @@ public class GatewayService {
                         .then();
             }
 
+            public Mono<Void> say(String message) {
+                return webClient.method(HttpMethod.POST)
+                        .uri("say")
+                        .bodyValue(message)//
+                        .retrieve()//
+                        .bodyToMono(String.class)//
+                        .timeout(Duration.ofSeconds(2))//
+                        .then();
+            }
+
             public Mono<Void> host(HostServerRequest request) {
                 return webClient.method(HttpMethod.POST)
                         .uri("host")

@@ -1101,10 +1101,6 @@ public class ServerService {
         return Mono.empty();
     }
 
-    public Mono<Void> sendCommand(UUID serverId, String command) {
-        return gatewayService.of(serverId).getServer().sendCommand(command);
-    }
-
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
         return initServer(request);
     }

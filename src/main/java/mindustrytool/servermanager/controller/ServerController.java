@@ -123,7 +123,12 @@ public class ServerController {
 
     @PostMapping("/servers/{id}/commands")
     public Mono<Void> sendCommand(@PathVariable("id") UUID serverId, @RequestBody String command) {
-        return serverService.sendCommand(serverId, command);
+        return gatewayService.of(serverId).getServer().sendCommand(command);
+    }
+    
+    @PostMapping("/servers/{id}/say")
+    public Mono<Void> say(@PathVariable("id") UUID serverId, @RequestBody String command) {
+        return gatewayService.of(serverId).getServer().say(command);
     }
 
     @PostMapping("/servers/{id}/host")
