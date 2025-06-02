@@ -551,16 +551,14 @@ public class ServerService {
     }
 
     private String createNewServerContainer(HostFromSeverRequest request) {
-
-        dockerClient.pullImageCmd(request.getInit().getImage())//
-                .exec(new ResultCallback.Adapter<PullResponseItem>() {
-                    @Override
-                    public void onError(Throwable throwable) {
-                        throwable.printStackTrace();
-                        sendConsole(request.getInit().getId(), throwable.getMessage());
-                    }
-                });
-
+        try {
+            dockerClient.pullImageCmd(request.getInit().getImage())
+                    .exec(new ResultCallback.Adapter<PullResponseItem>())
+                    .awaitCompletion();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+            sendConsole(request.getInit().getId(), e.getMessage());
+        }
         String serverId = request.getInit().getId().toString();
         String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath()
                 .toString();
