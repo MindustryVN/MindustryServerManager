@@ -18,5 +18,6 @@ public class StatsDto {
     private List<ModDto> mods = new ArrayList<>();
     private int kicks;
     private boolean isPaused = false;
+    private boolean isHosting = false;
     private String status = "UNSET";
 }

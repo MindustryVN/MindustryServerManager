@@ -241,13 +241,9 @@ public class ServerService {
 
                     if (isRunning) {
                         if (metadata.getInit().isAutoTurnOff() == false) {
-                            return gatewayService.of(server.getId())//
-                                    .getServer()//
-                                    .isHosting()
-                                    .defaultIfEmpty(false)
-                                    .onErrorReturn(false)
-                                    .flatMap(isHosting -> {
-                                        if (isHosting) {
+                            return stats(server.getId())//
+                                    .flatMap(stats -> {
+                                        if (stats.isHosting()) {
                                             return Mono.empty();
                                         }
 
@@ -886,8 +882,6 @@ public class ServerService {
             }
         }
     }
-
-
 
     public Flux<MapDto> getMaps(UUID serverId) {
         var folder = getFile(serverId, "maps");
