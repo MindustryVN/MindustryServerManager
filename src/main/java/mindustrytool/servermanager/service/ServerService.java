@@ -405,7 +405,8 @@ public class ServerService {
                         .onErrorResume(error -> {
                             error.printStackTrace();
                             return Mono
-                                    .just(modelMapper.map(server, ServerWithStatsDto.class).setUsage(new StatsDto()));
+                                    .just(modelMapper.map(server, ServerWithStatsDto.class)
+                                            .setUsage(new StatsDto().setStatus("ERROR")));
                         })//
                 );
     }
@@ -1166,6 +1167,7 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
+                .onErrorResume(_ignore -> Mono.empty())
                 .defaultIfEmpty(new StatsDto().setStatus(container == null //
                         ? "DELETED"
                         : container//
@@ -1174,6 +1176,7 @@ public class ServerService {
                                         ? "NOT_RESPONSE"
                                         : "DOWN"))
                 .map(serverStats -> {
+
                     var containerStats = stats.get(serverId);
                     if (containerStats != null) {
                         serverStats.setCpuUsage(containerStats.cpuUsage())//
