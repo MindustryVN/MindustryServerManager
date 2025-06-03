@@ -243,11 +243,8 @@ public class ServerService {
                     if (isRunning) {
                         if (metadata.getInit().isAutoTurnOff() == false) {
                             return stats(server.getId())//
+                                    .filter(stats -> !stats.isHosting())
                                     .flatMap(stats -> {
-                                        if (stats.isHosting()) {
-                                            return Mono.empty();
-                                        }
-
                                         sendConsole(server.getId(),
                                                 "Restart server " + server.getId() + " due to running but not hosting");
 
@@ -1256,8 +1253,6 @@ public class ServerService {
     }
 
     public void sendConsole(UUID serverId, String message) {
-        System.out.println("[" + serverId + "]: " + message);
-
         Sinks.Many<String> sink = consoleStreams.computeIfAbsent(serverId, id -> {
             Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer();
 
