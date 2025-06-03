@@ -168,9 +168,8 @@ public class GatewayService {
                         .uri("commands")
                         .bodyValue(command)//
                         .retrieve()//
-                        .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(10))//
-                        .then();
+                        .bodyToMono(Void.class)//
+                        .timeout(Duration.ofSeconds(2));
             }
 
             public Mono<Void> say(String message) {
@@ -178,9 +177,8 @@ public class GatewayService {
                         .uri("say")
                         .bodyValue(message)//
                         .retrieve()//
-                        .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(2))//
-                        .then();
+                        .bodyToMono(Void.class)//
+                        .timeout(Duration.ofSeconds(2));
             }
 
             public Mono<Void> host(HostServerRequest request) {
