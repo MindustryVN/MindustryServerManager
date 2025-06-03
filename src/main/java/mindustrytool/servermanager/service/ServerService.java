@@ -254,7 +254,7 @@ public class ServerService {
                                         return remove(server.getId())
                                                 .thenReturn(gatewayService.of(server.getId()).getBackend())
                                                 .flatMap(backend -> backend.host(server.getId().toString()))
-                                                .then();
+                                                .then(syncStats(server.getId()));
                                     });
                         }
 
@@ -1135,8 +1135,7 @@ public class ServerService {
                             .host(new HostServerRequest()// \
                                     .setMode(request.getMode())
                                     .setHostCommand(request.getHostCommand())))//
-                    .then(waitForHosting(gateway))
-                    .then(syncStats(serverId));
+                    .then(waitForHosting(gateway));
         });
     }
 
@@ -1146,7 +1145,7 @@ public class ServerService {
                         ? Mono.empty()
                         : ApiError.badRequest("Server is not hosting yet"))//
                 .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)))//
-                .then();
+                .then(syncStats(gateway.getId()));
     }
 
     public Mono<Void> ok(UUID serverId) {
