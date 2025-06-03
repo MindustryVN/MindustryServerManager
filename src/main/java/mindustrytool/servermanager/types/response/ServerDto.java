@@ -14,7 +14,7 @@ public class ServerDto {
     public String mode;
     public int port;
     public String hostCommand;
-    public String status = "UNSET";
+    public String status = "BACKEND_UNSET";
     public boolean official;
     public float ramUsage;
     public float totalRam;
