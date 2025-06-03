@@ -1099,6 +1099,16 @@ public class ServerService {
         return Mono.empty();
     }
 
+    public Mono<Void> say(UUID serverId, String message) {
+        var container = findContainerByServerId(serverId);
+
+        if (container == null || !container.getState().equalsIgnoreCase("running")) {
+            return Mono.empty();
+        }
+
+        return gatewayService.of(serverId).getServer().say(message);
+    }
+
     public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
         return initServer(request);
     }
