@@ -285,8 +285,7 @@ public class GatewayService {
                         .uri("servers/" + id.toString() + "/chat")//
                         .bodyValue(chat)//
                         .retrieve()//
-                        .bodyToMono(String.class)//
-                        .then();
+                        .bodyToMono(Void.class);
             }
 
             public Mono<Void> sendBuildLog(ArrayList<BuildLogDto> logs) {
