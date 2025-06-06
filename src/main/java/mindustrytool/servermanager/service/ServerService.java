@@ -665,6 +665,11 @@ public class ServerService {
                         + meta.getServerImageHash());
             }
 
+            if (!meta.getInit().getImage().equals(init.getImage())) {
+                result.add("Server image mismatch\ncurrent: " + meta.getInit().getImage() + "\nexpected: "
+                        + init.getImage());
+            }
+
             for (var mod : mods) {
                 if (stats.getMods().stream()
                         .noneMatch(runningMod -> runningMod.getFilename().equals(mod.getFilename()))) {
