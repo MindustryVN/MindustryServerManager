@@ -9,12 +9,12 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 @Data
 public class StatsDto {
+    private long tps;
     private float ramUsage = 0;
     private float totalRam = 0;
     private float cpuUsage = 0l;
     private long players = 0;
     private String mapName = "";
-    private byte[] mapData;
     private List<ModDto> mods = new ArrayList<>();
     private int kicks;
     private boolean isPaused = false;

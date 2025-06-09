@@ -125,7 +125,7 @@ public class ServerController {
     public Mono<Void> sendCommand(@PathVariable("id") UUID serverId, @RequestBody String command) {
         return gatewayService.of(serverId).getServer().sendCommand(command);
     }
-    
+
     @PostMapping("/servers/{id}/say")
     public Mono<Void> say(@PathVariable("id") UUID serverId, @RequestBody String message) {
         return serverService.say(serverId, message);
@@ -151,6 +151,11 @@ public class ServerController {
     @GetMapping("/servers/{id}/stats")
     public Mono<StatsDto> stats(@PathVariable("id") UUID serverId) {
         return serverService.stats(serverId);
+    }
+
+    @GetMapping(path = "/servers/{id}/live-stats", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<StatsDto> liveStats(@PathVariable("id") UUID serverId) {
+        return serverService.liveStats(serverId);
     }
 
     @PutMapping("/servers/{id}/shutdown")

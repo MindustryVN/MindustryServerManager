@@ -1180,6 +1180,11 @@ public class ServerService {
         return gatewayService.of(serverId).getServer().ok();
     }
 
+    public Flux<StatsDto> liveStats(UUID serverId) {
+        return Flux.interval(Duration.ofSeconds(3))
+                .flatMap(_ignore -> stats(serverId));
+    }
+
     public Mono<StatsDto> stats(UUID serverId) {
         var container = findContainerByServerId(serverId);
 
