@@ -44,4 +44,15 @@ public class InitServerRequest {
     private Map<String, String> env;
 
     private String image;
+
+    private ServerPlan plan;
+
+    @Data
+    public static class ServerPlan {
+        private final int id;
+        private final String name;
+        // Ram in mb, cpu in vcpu
+        private final float ram, cpu;
+    }
+
 }
