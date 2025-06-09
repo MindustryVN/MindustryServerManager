@@ -627,9 +627,10 @@ public class ServerService {
                 .withHostConfig(HostConfig.newHostConfig()//
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
-                        .withMemory(524288000l)
-                        .withCpuPeriod(100_000L)
-                        .withCpuQuota(100_000L)
+                        // in bytes
+                        .withMemory(request.getInit().getPlan().getRam() * 1024 * 1024)
+                        .withCpuPeriod(1000_000L)
+                        .withCpuQuota((long) (request.getInit().getPlan().getCpu() * 1000 * 1000))
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
@@ -717,6 +718,21 @@ public class ServerService {
             if (!init.getHostCommand().equals(meta.getInit().getHostCommand())) {
                 result.add("Host command mismatch\ncurrent: " + meta.getInit().getHostCommand() + "\nexpected: "
                         + init.getHostCommand());
+            }
+
+            if (init.getPlan().getId() != meta.getInit().getPlan().getId()) {
+                result.add("Plan mismatch\ncurrent: " + meta.getInit().getPlan().getId() + "\nexpected: "
+                        + init.getPlan().getId());
+            }
+
+            if (init.getPlan().getCpu() != meta.getInit().getPlan().getCpu()) {
+                result.add("Plan cpu mismatch\ncurrent: " + meta.getInit().getPlan().getCpu() + "\nexpected: "
+                        + init.getPlan().getCpu());
+            }
+
+            if (init.getPlan().getRam() != meta.getInit().getPlan().getRam()) {
+                result.add("Plan ram mismatch\ncurrent: " + meta.getInit().getPlan().getRam() + "\nexpected: "
+                        + init.getPlan().getRam());
             }
 
             return result;

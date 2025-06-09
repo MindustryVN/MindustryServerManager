@@ -45,14 +45,13 @@ public class InitServerRequest {
 
     private String image;
 
-    private ServerPlan plan;
+    private ServerPlan plan = new ServerPlan();
 
     @Data
     public static class ServerPlan {
-        private final int id;
-        private final String name;
-        // Ram in mb, cpu in vcpu
-        private final float ram, cpu;
+        private int id = 0;
+        private String name = "";
+        private long ram = 0;
+        private float cpu = 0;
     }
-
 }
