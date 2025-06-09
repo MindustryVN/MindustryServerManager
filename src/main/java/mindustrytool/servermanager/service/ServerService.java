@@ -37,7 +37,6 @@ import com.github.dockerjava.api.model.PullResponseItem;
 import com.github.dockerjava.api.model.RestartPolicy;
 import com.github.dockerjava.api.model.Statistics;
 import com.github.dockerjava.api.model.Volume;
-import com.github.dockerjava.core.InvocationBuilder.AsyncResultCallback;
 
 import arc.files.Fi;
 import arc.files.ZipFi;
@@ -98,7 +97,8 @@ public class ServerService {
 
     private final Map<UUID, Disposable> streamSubscriptions = new ConcurrentHashMap<>();
     private final Map<UUID, Sinks.Many<String>> consoleStreams = new ConcurrentHashMap<>();
-    private final Map<UUID, ResultCallback.Adapter<Frame>> adapters = new ConcurrentHashMap<>();
+    private final Map<UUID, ResultCallback.Adapter<Frame>> logsAdapter = new ConcurrentHashMap<>();
+    private final Map<UUID, ResultCallback.Adapter<Statistics>> statsAdapter = new ConcurrentHashMap<>();
 
     private final Long MAX_FILE_SIZE = 5000000l;
 
@@ -126,6 +126,7 @@ public class ServerService {
                         }
 
                         var container = containers.get(0);
+
                         readMetadataFromContainer(container)
                                 .ifPresent(metadata -> attachToLogs(containerId, metadata.getInit().getId()));
                     }
@@ -146,67 +147,8 @@ public class ServerService {
             if (optional.isPresent()) {
                 var metadata = optional.orElseThrow();
                 attachToLogs(container.getId(), metadata.getInit().getId());
+                attachStats(metadata.getInit().getId());
             }
-        }
-    }
-
-    @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.SECONDS)
-    private void updateStats() {
-        var containers = dockerClient.listContainersCmd()
-                .withShowAll(true)
-                .withLabelFilter(List.of(Config.serverLabelName))
-                .exec();
-
-        for (var container : containers) {
-            var optional = readMetadataFromContainer(container);
-
-            if (optional.isEmpty()) {
-                if (container.getState().equalsIgnoreCase("running")) {
-                    dockerClient.stopContainerCmd(container.getId()).exec();
-                }
-                dockerClient.removeContainerCmd(container.getId()).exec();
-                log.error("Container " + container.getId() + " has no metadata");
-                continue;
-            }
-
-            var metadata = optional.orElseThrow();
-            UUID id = metadata.getInit().getId();
-
-            var newStats = dockerClient.statsCmd(container.getId())
-                    .withNoStream(true)
-                    .exec(new AsyncResultCallback<>())
-                    .awaitResult();
-
-            statsSnapshots.compute(id, (_ignore, prev) -> {
-                if (prev == null)
-                    return new Statistics[] { null, newStats };
-                return new Statistics[] { prev[1], newStats };
-            });
-
-            var snapshots = statsSnapshots.get(id);
-            float cpuPercent = 0f;
-
-            if (snapshots != null && snapshots[0] != null && snapshots[1] != null) {
-                Long cpuDelta = snapshots[1].getCpuStats().getCpuUsage().getTotalUsage()
-                        - snapshots[0].getCpuStats().getCpuUsage().getTotalUsage();
-
-                Long systemDelta = Optional.ofNullable(snapshots[1].getCpuStats().getSystemCpuUsage()).orElse(0L)
-                        - Optional.ofNullable(snapshots[0].getCpuStats().getSystemCpuUsage()).orElse(0L);
-
-                Long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
-
-                if (systemDelta != null && systemDelta > 0 && cpuCores != null && cpuCores > 0) {
-                    cpuPercent = (float) cpuDelta / systemDelta * cpuCores * 100.0f;
-                }
-            }
-
-            long memUsage = Optional.ofNullable(newStats.getMemoryStats().getUsage()).orElse(0L); // bytes
-            long memLimit = Optional.ofNullable(newStats.getMemoryStats().getLimit()).orElse(0L); // bytes
-
-            float ramMB = memUsage / (1024f * 1024f);
-            float totalRamMB = memLimit / (1024f * 1024f);
-
-            stats.put(id, new ContainerStats(Math.max(cpuPercent, 0), Math.max(ramMB, 0), Math.max(totalRamMB, 0)));
         }
     }
 
@@ -1321,8 +1263,70 @@ public class ServerService {
         }
     }
 
+    private void attachStats(UUID id) {
+        var container = findContainerByServerId(id);
+
+        if (container == null) {
+            return;
+        }
+
+        if (statsAdapter.containsKey(id)) {
+            System.out.println("[" + id + "] Duplicate stats adapter");
+            return;
+        }
+
+        var adapter = dockerClient.statsCmd(container.getId())
+                .exec(new ResultCallback.Adapter<>() {
+                    @Override
+                    public void onNext(Statistics newStats) {
+
+                        statsSnapshots.compute(id, (_ignore, prev) -> {
+                            if (prev == null)
+                                return new Statistics[] { null, newStats };
+                            return new Statistics[] { prev[1], newStats };
+                        });
+
+                        var snapshots = statsSnapshots.get(id);
+                        float cpuPercent = 0f;
+
+                        if (snapshots != null && snapshots[0] != null && snapshots[1] != null) {
+                            Long cpuDelta = snapshots[1].getCpuStats().getCpuUsage().getTotalUsage()
+                                    - snapshots[0].getCpuStats().getCpuUsage().getTotalUsage();
+
+                            Long systemDelta = Optional.ofNullable(snapshots[1].getCpuStats().getSystemCpuUsage())
+                                    .orElse(0L)
+                                    - Optional.ofNullable(snapshots[0].getCpuStats().getSystemCpuUsage()).orElse(0L);
+
+                            Long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
+
+                            if (systemDelta != null && systemDelta > 0 && cpuCores != null && cpuCores > 0) {
+                                cpuPercent = (float) cpuDelta / systemDelta * cpuCores * 100.0f;
+                            }
+                        }
+
+                        long memUsage = Optional.ofNullable(newStats.getMemoryStats().getUsage()).orElse(0L); // bytes
+                        long memLimit = Optional.ofNullable(newStats.getMemoryStats().getLimit()).orElse(0L); // bytes
+
+                        float ramMB = memUsage / (1024f * 1024f);
+                        float totalRamMB = memLimit / (1024f * 1024f);
+
+                        stats.put(id, new ContainerStats(Math.max(cpuPercent, 0), Math.max(ramMB, 0),
+                                Math.max(totalRamMB, 0)));
+                    }
+
+                    @Override
+                    public void onComplete() {
+                        System.out.println("[" + id + "] Stats stream ended.");
+                        statsAdapter.remove(id);
+                    }
+                });
+
+        statsAdapter.put(id, adapter);
+    }
+
     private synchronized void attachToLogs(String containerId, UUID serverId) {
-        if (adapters.containsKey(serverId)) {
+        if (logsAdapter.containsKey(serverId)) {
+            System.out.println("[" + containerId + "] Duplicate logs adapter");
             return;
         }
 
@@ -1352,7 +1356,7 @@ public class ServerService {
             }
         };
 
-        adapters.put(serverId, callback);
+        logsAdapter.put(serverId, callback);
 
         dockerClient.logContainerCmd(containerId)
                 .withStdOut(true)
@@ -1367,7 +1371,7 @@ public class ServerService {
     public void removeConsoleStream(UUID serverId) {
         consoleStreams.remove(serverId);
         Optional.ofNullable(streamSubscriptions.remove(serverId)).ifPresent(Disposable::dispose);
-        Optional.ofNullable(adapters.remove(serverId)).ifPresent(t -> {
+        Optional.ofNullable(logsAdapter.remove(serverId)).ifPresent(t -> {
             try {
                 t.close();
             } catch (IOException e) {
