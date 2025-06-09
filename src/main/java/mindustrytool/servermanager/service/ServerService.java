@@ -720,9 +720,9 @@ public class ServerService {
                         + init.getHostCommand());
             }
 
-            if (init.getPlan().getId() != meta.getInit().getPlan().getId()) {
-                result.add("Plan mismatch\ncurrent: " + meta.getInit().getPlan().getId() + "\nexpected: "
-                        + init.getPlan().getId());
+            if (!init.getPlan().getName().equals(meta.getInit().getPlan().getName())) {
+                result.add("Plan mismatch\ncurrent: " + meta.getInit().getPlan().getName() + "\nexpected: "
+                        + init.getPlan().getName());
             }
 
             if (init.getPlan().getCpu() != meta.getInit().getPlan().getCpu()) {
