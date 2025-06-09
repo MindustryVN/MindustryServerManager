@@ -38,6 +38,7 @@ import mindustrytool.servermanager.types.request.HostFromSeverRequest;
 import mindustrytool.servermanager.types.request.HostServerRequest;
 import mindustrytool.servermanager.types.request.InitServerRequest;
 import mindustrytool.servermanager.types.request.PaginationRequest;
+import mindustrytool.servermanager.types.response.LiveStats;
 import mindustrytool.servermanager.types.response.ManagerMapDto;
 import mindustrytool.servermanager.types.response.ManagerModDto;
 import mindustrytool.servermanager.types.response.MapDto;
@@ -154,7 +155,7 @@ public class ServerController {
     }
 
     @GetMapping(path = "/servers/{id}/live-stats", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<StatsDto> liveStats(@PathVariable("id") UUID serverId) {
+    public Flux<LiveStats> liveStats(@PathVariable("id") UUID serverId) {
         return serverService.liveStats(serverId);
     }
 

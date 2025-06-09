@@ -59,6 +59,7 @@ import mindustrytool.servermanager.service.GatewayService.GatewayClient;
 import mindustrytool.servermanager.types.data.Player;
 import mindustrytool.servermanager.types.data.ServerContainerMetadata;
 import mindustrytool.servermanager.types.request.HostFromSeverRequest;
+import mindustrytool.servermanager.types.response.LiveStats;
 import mindustrytool.servermanager.types.response.ManagerMapDto;
 import mindustrytool.servermanager.types.response.ManagerModDto;
 import mindustrytool.servermanager.types.response.MapDto;
@@ -1180,9 +1181,9 @@ public class ServerService {
         return gatewayService.of(serverId).getServer().ok();
     }
 
-    public Flux<StatsDto> liveStats(UUID serverId) {
+    public Flux<LiveStats> liveStats(UUID serverId) {
         return Flux.interval(Duration.ofSeconds(3))
-                .flatMap(_ignore -> stats(serverId));
+                .flatMap(index -> stats(serverId).map(stats -> new LiveStats().setIndex(index).setValue(stats)));
     }
 
     public Mono<StatsDto> stats(UUID serverId) {
