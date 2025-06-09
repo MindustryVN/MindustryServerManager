@@ -1319,6 +1319,12 @@ public class ServerService {
                         System.out.println("[" + id + "] Stats stream ended.");
                         statsAdapter.remove(id);
                     }
+
+                    @Override
+                    public void onError(Throwable throwable) {
+                        System.out.println("[" + id + "] Stats stream error: " + throwable.getMessage());
+                        statsAdapter.remove(id);
+                    }
                 });
 
         statsAdapter.put(id, adapter);
