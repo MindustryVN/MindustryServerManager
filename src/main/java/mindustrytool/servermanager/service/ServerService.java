@@ -593,7 +593,7 @@ public class ServerService {
         var container = findContainerByServerId(serverId);
 
         if (container == null) {
-            return Mono.just(List.of("Container not created"));
+            return Mono.empty();
         }
 
         return Mono.zipDelayError(stats(serverId), getMods(serverId).collectList()).map(zip -> {
