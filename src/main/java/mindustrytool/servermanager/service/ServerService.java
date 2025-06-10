@@ -617,14 +617,14 @@ public class ServerService {
             for (var mod : mods) {
                 if (stats.getMods().stream()
                         .noneMatch(runningMod -> runningMod.getFilename().equals(mod.getFilename()))) {
-                    result.add("Mod " + mod.getFilename() + " is not loaded");
+                    result.add("Mod " + mod.getName() + ":" + mod.getFilename() + " is not loaded");
                 }
             }
 
             for (var runningMod : stats.getMods()) {
                 if (mods.stream()
                         .noneMatch(mod -> mod.getFilename().equals(runningMod.getFilename()))) {
-                    result.add("Mod " + runningMod.getFilename() + " is removed");
+                    result.add("Mod " + runningMod.getName() + ":" + runningMod.getFilename() + " is removed");
                 }
             }
 
