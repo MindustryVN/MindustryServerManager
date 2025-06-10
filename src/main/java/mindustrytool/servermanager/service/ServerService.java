@@ -186,15 +186,19 @@ public class ServerService {
                     if (isRunning) {
                         if (metadata.getInit().isAutoTurnOff() == false) {
                             return stats(server.getId())//
-                                    .filter(stats -> !stats.isHosting())
                                     .flatMap(stats -> {
-                                        sendConsole(server.getId(),
-                                                "Restart server " + server.getId() + " due to running but not hosting");
+                                        if (!stats.isHosting()) {
+                                            sendConsole(server.getId(),
+                                                    "Restart server " + server.getId()
+                                                            + " due to running but not hosting");
 
-                                        return remove(server.getId())
-                                                .thenReturn(gatewayService.of(server.getId()).getBackend())
-                                                .flatMap(backend -> backend.host(server.getId().toString()))
-                                                .then(syncStats(server.getId()));
+                                            return remove(server.getId())
+                                                    .thenReturn(gatewayService.of(server.getId()).getBackend())
+                                                    .flatMap(backend -> backend.host(server.getId().toString()))
+                                                    .then(syncStats(server.getId()));
+                                        }
+
+                                        return Mono.empty();
                                     });
                         }
 
