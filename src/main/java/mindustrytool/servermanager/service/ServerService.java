@@ -1124,7 +1124,7 @@ public class ServerService {
     }
 
     public Flux<LiveStats> liveStats(UUID serverId) {
-        return Flux.interval(Duration.ofSeconds(3))
+        return Flux.interval(Duration.ofSeconds(1))
                 .flatMap(index -> stats(serverId).map(stats -> new LiveStats().setIndex(index).setValue(stats)));
     }
 
