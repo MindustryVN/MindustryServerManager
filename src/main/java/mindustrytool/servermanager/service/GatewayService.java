@@ -84,6 +84,9 @@ public class GatewayService {
 
         public class Server {
             private final WebClient webClient = WebClient.builder()
+                    .codecs(configurer -> configurer
+                            .defaultCodecs()
+                            .maxInMemorySize(16 * 1024 * 1024))
                     .baseUrl(URI.create(
                             Config.IS_DEVELOPMENT//
                                     ? "http://localhost:9999/" //
@@ -240,6 +243,9 @@ public class GatewayService {
 
         public class Backend {
             private final WebClient webClient = WebClient.builder()
+                       .codecs(configurer -> configurer
+                            .defaultCodecs()
+                            .maxInMemorySize(16 * 1024 * 1024))
                     .baseUrl(URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/").toString())
                     .defaultStatusHandler(GatewayClient::handleStatus, GatewayClient::createError)
                     .defaultHeaders(headers -> {
