@@ -1128,8 +1128,10 @@ public class ServerService {
     }
 
     public Flux<LiveStats> liveStats(UUID serverId) {
-        return Flux.interval(Duration.ofSeconds(1))
-                .flatMap(index -> stats(serverId).map(stats -> new LiveStats().setIndex(index).setValue(stats)));
+        return Flux.concat(
+                stats(serverId).map(stats -> new LiveStats(0l, stats)),
+                Flux.interval(Duration.ofSeconds(1))
+                        .flatMap(index -> stats(serverId).map(stats -> new LiveStats(index + 1, stats))));
     }
 
     public Mono<StatsDto> stats(UUID serverId) {

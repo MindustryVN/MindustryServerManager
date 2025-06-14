@@ -1,7 +1,6 @@
 package mindustrytool.servermanager.types.response;
 
 import java.time.Instant;
-
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -9,6 +8,11 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class LiveStats {
     private Long index;
-    private Instant createdAt = Instant.now();
     private StatsDto value;
+    private Instant createdAt = Instant.now();
+
+    public LiveStats(Long index, StatsDto value) {
+        this.index = index;
+        this.value = value;
+    }
 }
