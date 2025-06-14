@@ -133,12 +133,13 @@ public class ServerController {
     }
 
     @PostMapping("/servers/{id}/host")
-    public Mono<Void> host(@PathVariable("id") UUID serverId, @Validated @RequestBody HostServerRequest request) {
+    public Flux<String> host(@PathVariable("id") UUID serverId, @Validated @RequestBody HostServerRequest request) {
         return serverService.host(serverId, request);
     }
 
     @PostMapping("/servers/{id}/host-from-server")
-    public Mono<Void> hostFromServer(@PathVariable("id") UUID serverId,
+    public Flux<String> hostFromServer(//
+            @PathVariable("id") UUID serverId,
             @Validated @RequestBody HostFromSeverRequest request//
     ) {
         return serverService.hostFromServer(serverId, request).subscribeOn(Schedulers.single());

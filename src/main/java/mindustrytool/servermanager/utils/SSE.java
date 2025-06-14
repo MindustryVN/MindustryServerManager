@@ -1,0 +1,60 @@
+package mindustrytool.servermanager.utils;
+
+import java.util.function.Consumer;
+import java.util.function.Function;
+
+import lombok.RequiredArgsConstructor;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+import reactor.core.publisher.Sinks;
+import reactor.core.publisher.Sinks.Many;
+import reactor.util.context.Context;
+
+@RequiredArgsConstructor
+public class SSE {
+
+    public static final Class<?> CONTEXT_KEY = Consumer.class;
+
+    public static Mono<Consumer<String>> getContext() {
+        return Mono.deferContextual(Mono::just)//
+                .cast(Context.class)//
+                .filter(SSE::hasContext)//
+                .flatMap(SSE::getContext);
+    }
+
+    private static boolean hasContext(Context context) {
+        return context.hasKey(CONTEXT_KEY);
+    }
+
+    private static Mono<Consumer<String>> getContext(Context context) {
+        return context.<Mono<Consumer<String>>>get(CONTEXT_KEY);
+    }
+
+    public static Mono<Void> event(String message){
+        return getContext()
+                .flatMap(event -> {
+                    event.accept(message);
+                    return Mono.empty();
+                });
+    }
+
+    public static Flux<String> create(Function<Consumer<String>, Mono<String>> func) {
+        Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
+
+        return Flux.merge(func.apply(sink::tryEmitNext).onErrorResume(error -> {
+
+            if (error instanceof ApiError apiError && apiError.status.value() < 500) {
+                sink.tryEmitNext(error.getMessage());
+                return Mono.empty();
+            }
+
+            sink.tryEmitError(error);
+
+            return Mono.empty();
+
+        })//
+                .doFinally(_ignore -> sink.tryEmitComplete()), sink.asFlux())
+                .contextWrite(context -> context.put(CONTEXT_KEY, sink));
+    }
+
+}

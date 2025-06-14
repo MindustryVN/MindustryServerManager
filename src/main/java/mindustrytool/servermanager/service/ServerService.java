@@ -69,6 +69,7 @@ import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
+import mindustrytool.servermanager.utils.SSE;
 import mindustrytool.servermanager.utils.Utils;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
@@ -404,95 +405,102 @@ public class ServerService {
         }
     }
 
-    public Mono<Void> initServer(HostFromSeverRequest request) {
-        log.info("Init server: " + request.getInit().getId());
+    public Flux<String> initServer(HostFromSeverRequest request) {
+        return SSE.create(callback -> {
 
-        if (request.getInit().getPort() <= 0) {
-            throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
-        }
+            log.info("Init server: " + request.getInit().getId());
 
-        var containerOnRequestPort = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(List.of(Config.serverLabelName))//
-                .exec();
+            if (request.getInit().getPort() <= 0) {
+                throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
+            }
 
-        for (var container : containerOnRequestPort) {
+            var containerOnRequestPort = dockerClient.listContainersCmd()//
+                    .withShowAll(true)//
+                    .withLabelFilter(List.of(Config.serverLabelName))//
+                    .exec();
 
-            for (var port : container.getPorts()) {
+            for (var container : containerOnRequestPort) {
+
+                for (var port : container.getPorts()) {
+
+                    var optional = readMetadataFromContainer(container);
+
+                    if (optional.isEmpty()) {
+                        callback.accept("Container " + container.getId() + " has no metadata");
+                        dockerClient.removeConfigCmd(container.getId()).exec();
+                        continue;
+                    }
+
+                    var metadata = optional.get();
+
+                    var hasSamePort = port.getPublicPort() == request.getInit().getPort();
+                    var hasSameId = request.getInit().getId().equals(metadata.getInit().getId());
+
+                    if (hasSamePort && !hasSameId) {
+                        callback.accept("Port " + request.getInit().getPort() + " is already used by container: "
+                                + container.getId()
+                                + " attempt to delete it");
+
+                        if (container.getState().equalsIgnoreCase("running")) {
+                            dockerClient.stopContainerCmd(container.getId()).exec();
+                        }
+                        dockerClient.removeContainerCmd(container.getId()).exec();
+                        break;
+                    }
+                }
+            }
+
+            String containerId = null;
+
+            var containers = dockerClient.listContainersCmd()//
+                    .withShowAll(true)//
+                    .withLabelFilter(Map.of(Config.serverIdLabel, request.getInit().getId().toString()))//
+                    .exec();
+
+            if (containers.isEmpty()) {
+                callback.accept("Container " + request.getInit().getId() + " got deleted, creating new");
+                containerId = createNewServerContainer(request);
+            } else {
+                var container = containers.get(0);
+                containerId = container.getId();
 
                 var optional = readMetadataFromContainer(container);
 
                 if (optional.isEmpty()) {
-                    log.error("Container " + container.getId() + " has no metadata");
-                    dockerClient.removeConfigCmd(container.getId()).exec();
-                    continue;
-                }
-
-                var metadata = optional.get();
-
-                var hasSamePort = port.getPublicPort() == request.getInit().getPort();
-                var hasSameId = request.getInit().getId().equals(metadata.getInit().getId());
-
-                if (hasSamePort && !hasSameId) {
-                    log.info("Port " + request.getInit().getPort() + " is already used by container: "
-                            + container.getId()
-                            + " attempt to delete it");
-
+                    callback.accept("Container " + container.getId() + " has no metadata");
                     if (container.getState().equalsIgnoreCase("running")) {
                         dockerClient.stopContainerCmd(container.getId()).exec();
                     }
                     dockerClient.removeContainerCmd(container.getId()).exec();
-                    break;
+                    containerId = createNewServerContainer(request);
+                }
+
+                callback.accept("Found container " + container.getNames()[0] + " status: " + container.getState());
+
+                if (!container.getState().equalsIgnoreCase("running")) {
+                    callback.accept("Start container " + container.getNames()[0]);
+                    dockerClient.startContainerCmd(containerId).exec();
                 }
             }
-        }
 
-        String containerId = null;
+            callback.accept("Created server: " + request.getInit().getName());
 
-        var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
-                .withLabelFilter(Map.of(Config.serverIdLabel, request.getInit().getId().toString()))//
-                .exec();
+            var serverGateway = gatewayService.of(request.getInit().getId()).getServer();
 
-        if (containers.isEmpty()) {
-            log.warn("Container " + request.getInit().getId() + " got deleted, creating new");
-            containerId = createNewServerContainer(request);
-        } else {
-            var container = containers.get(0);
-            containerId = container.getId();
+            attachToLogs(containerId, request.getInit().getId());
 
-            var optional = readMetadataFromContainer(container);
+            callback.accept("Waiting for server to start");
 
-            if (optional.isEmpty()) {
-                log.error("Container " + container.getId() + " has no metadata");
-                if (container.getState().equalsIgnoreCase("running")) {
-                    dockerClient.stopContainerCmd(container.getId()).exec();
-                }
-                dockerClient.removeContainerCmd(container.getId()).exec();
-                containerId = createNewServerContainer(request);
-            }
+            return serverGateway//
+                    .ok()
+                    .then(serverGateway.isHosting())//
+                    .flatMapMany(isHosting -> isHosting //
+                            ? Flux.just("Server is hosting, do hosting")
+                            : host(request.getInit().getId(), request.getHost()))
+                    .then(syncStats(request.getInit().getId()))
+                    .thenReturn("Complete");
 
-            log.info("Found container " + container.getNames()[0] + " status: " + container.getState());
-
-            if (!container.getState().equalsIgnoreCase("running")) {
-                log.info("Start container " + container.getNames()[0]);
-                dockerClient.startContainerCmd(containerId).exec();
-            }
-        }
-
-        log.info("Created server: " + request.getInit().getName());
-
-        var serverGateway = gatewayService.of(request.getInit().getId()).getServer();
-
-        attachToLogs(containerId, request.getInit().getId());
-
-        return serverGateway//
-                .ok()
-                .then(serverGateway.isHosting())//
-                .flatMap(isHosting -> isHosting //
-                        ? Mono.empty()
-                        : host(request.getInit().getId(), request.getHost()))
-                .then(syncStats(request.getInit().getId()));
+        });
     }
 
     private String createNewServerContainer(HostFromSeverRequest request) {
@@ -1077,40 +1085,50 @@ public class ServerService {
         return gatewayService.of(serverId).getServer().say(message);
     }
 
-    public Mono<Void> hostFromServer(UUID serverId, HostFromSeverRequest request) {
+    public Flux<String> hostFromServer(UUID serverId, HostFromSeverRequest request) {
         return initServer(request);
     }
 
-    public Mono<Void> host(UUID serverId, HostServerRequest request) {
-        var gateway = gatewayService.of(serverId);
+    public Flux<String> host(UUID serverId, HostServerRequest request) {
+        return SSE.create(callback -> {
+            var gateway = gatewayService.of(serverId);
 
-        log.info("Host server: " + serverId);
+            log.info("Host server: " + serverId);
 
-        return gateway.getServer().isHosting().flatMap(isHosting -> {
-            if (isHosting) {
-                return Mono.empty();
-            }
+            return gateway.getServer().isHosting().flatMap(isHosting -> {
+                if (isHosting) {
+                    return Mono.just("Server is hosting, do nothing");
+                }
 
-            var container = findContainerByServerId(serverId);
+                var container = findContainerByServerId(serverId);
 
-            if (container == null) {
-                return ApiError.badRequest("Server not initialized");
-            }
+                if (container == null) {
+                    return ApiError.badRequest("Server not initialized");
+                }
 
-            var server = readMetadataFromContainer(container).orElseThrow();
+                callback.accept("Read metadata");
 
-            String[] preHostCommand = { //
-                    "config name %s".formatted(server.getInit().getName()), //
-                    "config desc %s".formatted(server.getInit().getDescription())//
-            };
+                var server = readMetadataFromContainer(container).orElseThrow();
 
-            return gateway.getServer()//
-                    .sendCommand(preHostCommand)//
-                    .then(gateway.getServer()
-                            .host(new HostServerRequest()// \
-                                    .setMode(request.getMode())
-                                    .setHostCommand(request.getHostCommand())))//
-                    .then(waitForHosting(gateway));
+                String[] preHostCommand = { //
+                        "config name %s".formatted(server.getInit().getName()), //
+                        "config desc %s".formatted(server.getInit().getDescription())//
+                };
+
+                for (var command : preHostCommand) {
+                    callback.accept("Execute command: " + command);
+                }
+
+                return gateway.getServer()//
+                        .sendCommand(preHostCommand)//
+                        .then(gateway.getServer()
+                                .host(new HostServerRequest()// \
+                                        .setMode(request.getMode())
+                                        .setHostCommand(request.getHostCommand())))//
+                        .then(SSE.event("Wait for server status"))
+                        .then(waitForHosting(gateway))
+                        .thenReturn("Ready");
+            });
         });
     }
 

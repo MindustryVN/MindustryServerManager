@@ -4,7 +4,6 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-
 import javax.imageio.ImageIO;
 
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -79,5 +78,4 @@ public class Utils {
             throw new RuntimeException("Can not parse to json: " + e.getMessage(), e);
         }
     }
-
 }
