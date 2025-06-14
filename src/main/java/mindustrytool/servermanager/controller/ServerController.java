@@ -132,12 +132,12 @@ public class ServerController {
         return serverService.say(serverId, message);
     }
 
-    @PostMapping("/servers/{id}/host")
+    @PostMapping(path = "/servers/{id}/host", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> host(@PathVariable("id") UUID serverId, @Validated @RequestBody HostServerRequest request) {
         return serverService.host(serverId, request);
     }
 
-    @PostMapping("/servers/{id}/host-from-server")
+    @PostMapping(path = "/servers/{id}/host-from-server", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<String> hostFromServer(//
             @PathVariable("id") UUID serverId,
             @Validated @RequestBody HostFromSeverRequest request//
