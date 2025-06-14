@@ -406,7 +406,7 @@ public class ServerService {
         }
     }
 
-    public Flux<String> initServer(HostFromSeverRequest request) {
+    public Flux<String> hostFromServer(HostFromSeverRequest request) {
         return SSE.create(callback -> {
 
             log.info("Init server: " + request.getInit().getId());
@@ -484,8 +484,6 @@ public class ServerService {
                 }
             }
 
-            callback.accept("Created server: " + request.getInit().getName());
-
             var serverGateway = gatewayService.of(request.getInit().getId()).getServer();
 
             attachToLogs(containerId, request.getInit().getId());
@@ -496,7 +494,7 @@ public class ServerService {
                     .ok()
                     .then(serverGateway.isHosting())//
                     .flatMapMany(isHosting -> isHosting //
-                            ? Flux.just("Server is hosting, do hosting")
+                            ? Flux.just("Server is hosting, do nothing")
                             : host(request.getInit().getId(), request.getHost()));
         });
     }
@@ -1084,7 +1082,7 @@ public class ServerService {
     }
 
     public Flux<String> hostFromServer(UUID serverId, HostFromSeverRequest request) {
-        return initServer(request);
+        return hostFromServer(request);
     }
 
     public Flux<String> host(UUID serverId, HostServerRequest request) {
@@ -1094,7 +1092,7 @@ public class ServerService {
 
         log.info("Host server: " + serverId);
 
-        return Flux.merge(sink.asFlux(), gateway.getServer().isHosting().flatMapMany(isHosting -> {
+        return Flux.merge(gateway.getServer().isHosting().flatMapMany(isHosting -> {
             if (isHosting) {
                 return Flux.just("Server is hosting, do nothing");
             }
@@ -1129,7 +1127,7 @@ public class ServerService {
                     .then(syncStats(serverId))
                     .doFinally(_ignore -> sink.tryEmitComplete())
                     .thenMany(Flux.empty());
-        }));
+        }), sink.asFlux());
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
