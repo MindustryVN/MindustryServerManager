@@ -1124,7 +1124,7 @@ public class ServerService {
                             .host(new HostServerRequest()// \
                                     .setMode(request.getMode())
                                     .setHostCommand(request.getHostCommand())))//
-                    .then(SSE.event("Wait for server status"))
+                    .then(Mono.fromCallable(() -> sink.tryEmitNext("Wait for server status")))
                     .then(waitForHosting(gateway))
                     .then(syncStats(serverId))
                     .thenMany(Flux.empty());
