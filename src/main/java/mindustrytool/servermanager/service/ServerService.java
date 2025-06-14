@@ -497,10 +497,7 @@ public class ServerService {
                     .then(serverGateway.isHosting())//
                     .flatMapMany(isHosting -> isHosting //
                             ? Flux.just("Server is hosting, do hosting")
-                            : host(request.getInit().getId(), request.getHost()))
-                    .then(syncStats(request.getInit().getId()))
-                    .thenReturn("Complete");
-
+                            : host(request.getInit().getId(), request.getHost()));
         });
     }
 
@@ -1129,6 +1126,7 @@ public class ServerService {
                                     .setHostCommand(request.getHostCommand())))//
                     .then(SSE.event("Wait for server status"))
                     .then(waitForHosting(gateway))
+                    .then(syncStats(serverId))
                     .thenMany(Flux.empty());
         }));
     }
