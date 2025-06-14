@@ -217,9 +217,10 @@ public class ServerController {
     public Flux<PlayerInfoDto> getPlayerInfos(//
             @PathVariable("id") UUID serverId, //
             @Validated PaginationRequest request,
-            @RequestParam(name = "banned", required = false) Boolean banned//
+            @RequestParam(name = "banned", required = false) Boolean banned, //
+            @RequestParam(name = "filter", required = false) String filter//
     ) {
-        return gatewayService.of(serverId).getServer().getPlayers(request.getPage(), request.getSize(), banned);
+        return gatewayService.of(serverId).getServer().getPlayers(request.getPage(), request.getSize(), banned, filter);
     }
 
     @GetMapping("servers/{id}/manager-version")

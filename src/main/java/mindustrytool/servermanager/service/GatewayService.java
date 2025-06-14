@@ -211,12 +211,13 @@ public class GatewayService {
                         .timeout(Duration.ofSeconds(10));
             }
 
-            public Flux<PlayerInfoDto> getPlayers(int page, int size, Boolean banned) {
+            public Flux<PlayerInfoDto> getPlayers(int page, int size, Boolean banned, String filter) {
                 return webClient.method(HttpMethod.GET)
                         .uri(builder -> builder.path("player-infos")//
                                 .queryParam("page", page)
                                 .queryParam("size", size)
                                 .queryParam("banned", banned)//
+                                .queryParam("filter", filter)
                                 .build())
                         .retrieve()//
                         .bodyToFlux(PlayerInfoDto.class)//
@@ -243,7 +244,7 @@ public class GatewayService {
 
         public class Backend {
             private final WebClient webClient = WebClient.builder()
-                       .codecs(configurer -> configurer
+                    .codecs(configurer -> configurer
                             .defaultCodecs()
                             .maxInMemorySize(16 * 1024 * 1024))
                     .baseUrl(URI.create(envConfig.serverConfig().serverUrl() + "/api/v3/").toString())
