@@ -1097,7 +1097,7 @@ public class ServerService {
 
         log.info("Host server: " + serverId);
 
-        return gateway.getServer().isHosting().flatMapMany(isHosting -> {
+        return Flux.merge(sink.asFlux(), gateway.getServer().isHosting().flatMapMany(isHosting -> {
             if (isHosting) {
                 return Flux.just("Server is hosting, do nothing");
             }
@@ -1129,8 +1129,8 @@ public class ServerService {
                                     .setHostCommand(request.getHostCommand())))//
                     .then(SSE.event("Wait for server status"))
                     .then(waitForHosting(gateway))
-                    .thenMany(sink.asFlux());
-        });
+                    .thenMany(Flux.empty());
+        }));
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
