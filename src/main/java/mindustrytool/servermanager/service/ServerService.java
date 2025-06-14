@@ -76,6 +76,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.publisher.Sinks.EmitResult;
+import reactor.core.publisher.Sinks.Many;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -1090,45 +1091,45 @@ public class ServerService {
     }
 
     public Flux<String> host(UUID serverId, HostServerRequest request) {
-        return SSE.create(callback -> {
-            var gateway = gatewayService.of(serverId);
+        Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
 
-            log.info("Host server: " + serverId);
+        var gateway = gatewayService.of(serverId);
 
-            return gateway.getServer().isHosting().flatMap(isHosting -> {
-                if (isHosting) {
-                    return Mono.just("Server is hosting, do nothing");
-                }
+        log.info("Host server: " + serverId);
 
-                var container = findContainerByServerId(serverId);
+        return gateway.getServer().isHosting().flatMapMany(isHosting -> {
+            if (isHosting) {
+                return Flux.just("Server is hosting, do nothing");
+            }
 
-                if (container == null) {
-                    return ApiError.badRequest("Server not initialized");
-                }
+            var container = findContainerByServerId(serverId);
 
-                callback.accept("Read metadata");
+            if (container == null) {
+                return ApiError.badRequest("Server not initialized");
+            }
 
-                var server = readMetadataFromContainer(container).orElseThrow();
+            sink.tryEmitNext("Read metadata");
 
-                String[] preHostCommand = { //
-                        "config name %s".formatted(server.getInit().getName()), //
-                        "config desc %s".formatted(server.getInit().getDescription())//
-                };
+            var server = readMetadataFromContainer(container).orElseThrow();
 
-                for (var command : preHostCommand) {
-                    callback.accept("Execute command: " + command);
-                }
+            String[] preHostCommand = { //
+                    "config name %s".formatted(server.getInit().getName()), //
+                    "config desc %s".formatted(server.getInit().getDescription())//
+            };
 
-                return gateway.getServer()//
-                        .sendCommand(preHostCommand)//
-                        .then(gateway.getServer()
-                                .host(new HostServerRequest()// \
-                                        .setMode(request.getMode())
-                                        .setHostCommand(request.getHostCommand())))//
-                        .then(SSE.event("Wait for server status"))
-                        .then(waitForHosting(gateway))
-                        .thenReturn("Ready");
-            });
+            for (var command : preHostCommand) {
+                sink.tryEmitNext("Execute command: " + command);
+            }
+
+            return gateway.getServer()//
+                    .sendCommand(preHostCommand)//
+                    .then(gateway.getServer()
+                            .host(new HostServerRequest()// \
+                                    .setMode(request.getMode())
+                                    .setHostCommand(request.getHostCommand())))//
+                    .then(SSE.event("Wait for server status"))
+                    .then(waitForHosting(gateway))
+                    .thenMany(sink.asFlux());
         });
     }
 
