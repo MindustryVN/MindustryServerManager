@@ -492,10 +492,8 @@ public class ServerService {
 
             return serverGateway//
                     .ok()
-                    .then(serverGateway.isHosting())//
-                    .flatMapMany(isHosting -> isHosting //
-                            ? Flux.just("Server is hosting, do nothing")
-                            : host(request.getInit().getId(), request.getHost()));
+                    .then(SSE.event("Server started, waiting for hosting"))
+                    .thenMany(host(request.getInit().getId(), request.getHost()));
         });
     }
 
