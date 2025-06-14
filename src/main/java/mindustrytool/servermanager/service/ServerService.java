@@ -1127,6 +1127,7 @@ public class ServerService {
                     .then(Mono.fromCallable(() -> sink.tryEmitNext("Wait for server status")))
                     .then(waitForHosting(gateway))
                     .then(syncStats(serverId))
+                    .doFinally(_ignore -> sink.tryEmitComplete())
                     .thenMany(Flux.empty());
         }));
     }
