@@ -1265,14 +1265,17 @@ public class ServerService {
 
     public void sendConsole(UUID serverId, String message) {
         Sinks.Many<String> sink = consoleStreams.computeIfAbsent(serverId, id -> {
-            Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer();
+            Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer(10000);
 
             Disposable subscription = newSink.asFlux()
                     .bufferTimeout(20, Duration.ofMillis(100))
                     .concatMap(batch -> gatewayService.of(serverId)//
                             .getBackend()
                             .sendConsole(String.join("", batch))
-                            .onErrorResume(_e -> Mono.empty())) // preserve order
+                            .onErrorResume(e -> {
+                                e.printStackTrace();
+                                return Mono.empty();
+                            })) // preserve order
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
                             null,
