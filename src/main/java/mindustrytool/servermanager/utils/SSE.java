@@ -46,7 +46,6 @@ public class SSE {
 
             if (error instanceof ApiError apiError && apiError.status.value() < 500) {
                 sink.tryEmitNext(error.getMessage());
-                return Mono.empty();
             }
 
             sink.tryEmitError(error);
