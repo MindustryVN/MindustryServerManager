@@ -219,7 +219,7 @@ public class ServerService {
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty();
 
-                                    var killFlag = serverKillFlags.getOrDefault(server.getId(), false);
+                                    var killFlag = serverKillFlags.containsKey(server.getId());
 
                                     if (shouldKill) {
                                         if (killFlag) {
