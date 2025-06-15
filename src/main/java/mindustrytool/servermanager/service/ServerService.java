@@ -41,6 +41,7 @@ import com.github.dockerjava.api.model.Volume;
 import arc.files.Fi;
 import arc.files.ZipFi;
 import arc.struct.StringMap;
+import arc.util.Log;
 import arc.util.serialization.Json;
 import arc.util.serialization.Jval;
 import arc.util.serialization.Jval.Jformat;
@@ -1092,12 +1093,14 @@ public class ServerService {
 
         return Flux.merge(gateway.getServer().isHosting().flatMapMany(isHosting -> {
             if (isHosting) {
+                Log.info("Server is hosting, do nothing");
                 return Flux.just("Server is hosting, do nothing");
             }
 
             var container = findContainerByServerId(serverId);
 
             if (container == null) {
+                Log.info("Server not initialized");
                 return ApiError.badRequest("Server not initialized");
             }
 
@@ -1111,6 +1114,7 @@ public class ServerService {
             };
 
             for (var command : preHostCommand) {
+                Log.info("Execute command: " + command);
                 sink.tryEmitNext("Execute command: " + command);
             }
 
