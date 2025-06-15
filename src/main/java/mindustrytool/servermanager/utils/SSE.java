@@ -43,7 +43,7 @@ public class SSE {
 
         return Flux.merge(func.apply(sink::tryEmitNext).onErrorResume(error -> {
             error.printStackTrace();
-            
+
             if (error instanceof ApiError apiError && apiError.status.value() < 500) {
                 sink.tryEmitNext(error.getMessage());
                 return Mono.empty();
@@ -55,7 +55,7 @@ public class SSE {
 
         })//
                 .doFinally(_ignore -> sink.tryEmitComplete()), sink.asFlux())
-                .contextWrite(context -> context.put(CONTEXT_KEY, sink));
+                .contextWrite(context -> context.put(CONTEXT_KEY, Mono.just(sink)));
     }
 
 }
