@@ -149,8 +149,14 @@ public class ServerService {
 
             if (optional.isPresent()) {
                 var metadata = optional.orElseThrow();
-                attachToLogs(container.getId(), metadata.getInit().getId());
-                attachStats(metadata.getInit().getId());
+
+                if (!logsAdapter.containsKey(metadata.getInit().getId())) {
+                    attachToLogs(container.getId(), metadata.getInit().getId());
+                }
+
+                if (!statsAdapter.containsKey(metadata.getInit().getId())) {
+                    attachStats(metadata.getInit().getId());
+                }
             }
         }
     }
