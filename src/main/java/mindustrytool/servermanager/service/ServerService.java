@@ -15,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
@@ -467,7 +468,7 @@ public class ServerService {
 
             if (containers.isEmpty()) {
                 callback.accept("Container " + request.getInit().getId() + " got deleted, creating new");
-                containerId = createNewServerContainer(request);
+                containerId = createNewServerContainer(request, callback);
             } else {
                 var container = containers.get(0);
                 containerId = container.getId();
@@ -480,7 +481,7 @@ public class ServerService {
                         dockerClient.stopContainerCmd(container.getId()).exec();
                     }
                     dockerClient.removeContainerCmd(container.getId()).exec();
-                    containerId = createNewServerContainer(request);
+                    containerId = createNewServerContainer(request, callback);
                 }
 
                 callback.accept("Found container " + container.getNames()[0] + " status: " + container.getState());
@@ -504,15 +505,20 @@ public class ServerService {
         });
     }
 
-    private String createNewServerContainer(HostFromSeverRequest request) {
+    private String createNewServerContainer(HostFromSeverRequest request, Consumer<String> callback) {
         try {
+            callback.accept("Pulling image: " + request.getInit().getImage());
             dockerClient.pullImageCmd(request.getInit().getImage())
                     .exec(new ResultCallback.Adapter<PullResponseItem>())
                     .awaitCompletion();
+
+            callback.accept("Image pulled");
         } catch (InterruptedException e) {
             e.printStackTrace();
+            callback.accept(e.getMessage());
             sendConsole(request.getInit().getId(), e.getMessage());
         }
+
         String serverId = request.getInit().getId().toString();
         String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath()
                 .toString();
