@@ -416,7 +416,7 @@ public class ServerService {
     public Flux<String> hostFromServer(HostFromSeverRequest request) {
         return SSE.create(callback -> {
 
-            log.info("Init server: " + request.getInit().getId());
+            callback.accept("Init server: " + request.getInit().getId());
 
             if (request.getInit().getPort() <= 0) {
                 throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
