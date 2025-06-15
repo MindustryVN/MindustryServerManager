@@ -15,7 +15,7 @@ public class SSE {
 
     public static final Class<?> CONTEXT_KEY = Consumer.class;
 
-    public static Mono<Consumer<String>> getContext() {
+    public static Mono<Many<String>> getContext() {
         return Mono.deferContextual(Mono::just)//
                 .cast(Context.class)//
                 .filter(SSE::hasContext)//
@@ -26,14 +26,14 @@ public class SSE {
         return context.hasKey(CONTEXT_KEY);
     }
 
-    private static Mono<Consumer<String>> getContext(Context context) {
-        return context.<Mono<Consumer<String>>>get(CONTEXT_KEY);
+    private static Mono<Many<String>> getContext(Context context) {
+        return context.<Mono<Many<String>>>get(CONTEXT_KEY);
     }
 
     public static Mono<Void> event(String message) {
         return getContext()
                 .flatMap(event -> {
-                    event.accept(message);
+                    event.tryEmitNext(message);
                     return Mono.empty();
                 });
     }
