@@ -1101,7 +1101,7 @@ public class ServerService {
                 return ApiError.badRequest("Server not initialized");
             }
 
-            sink.tryEmitNext("Read metadata");
+            sink.tryEmitNext("Reading metadata");
 
             var server = readMetadataFromContainer(container).orElseThrow();
 
@@ -1124,7 +1124,7 @@ public class ServerService {
                     .then(waitForHosting(gateway))
                     .then(syncStats(serverId))
                     .doFinally(_ignore -> sink.tryEmitComplete())
-                    .thenMany(Flux.empty());
+                    .thenMany(Flux.just("Complete"));
         }), sink.asFlux());
     }
 
