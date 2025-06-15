@@ -1116,7 +1116,8 @@ public class ServerService {
 
             String[] preHostCommand = { //
                     "config name %s".formatted(server.getInit().getName()), //
-                    "config desc %s".formatted(server.getInit().getDescription())//
+                    "config desc %s".formatted(server.getInit().getDescription()), //
+                    "version"
             };
 
             for (var command : preHostCommand) {
