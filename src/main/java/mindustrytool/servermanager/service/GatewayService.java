@@ -311,7 +311,7 @@ public class GatewayService {
                         .bodyValue(console)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
-                        .timeout(Duration.ofSeconds(1))
+                        .timeout(Duration.ofSeconds(3))
                         .doOnError((error) -> log.error("Fail to send to console", error));
 
             }
