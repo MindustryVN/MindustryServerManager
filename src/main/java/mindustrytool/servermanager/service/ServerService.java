@@ -65,7 +65,7 @@ import mindustrytool.servermanager.types.response.ManagerModDto;
 import mindustrytool.servermanager.types.response.MapDto;
 import mindustrytool.servermanager.types.response.MindustryPlayerDto;
 import mindustrytool.servermanager.types.response.ModDto;
-import mindustrytool.servermanager.types.response.ModDto.ModMetaDto;
+import mindustrytool.servermanager.types.response.ModMetaDto;
 import mindustrytool.servermanager.types.response.ServerWithStatsDto;
 import mindustrytool.servermanager.types.response.ServerFileDto;
 import mindustrytool.servermanager.types.response.StatsDto;

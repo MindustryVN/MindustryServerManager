@@ -46,12 +46,4 @@ public class InitServerRequest {
     private String image;
 
     private ServerPlan plan = new ServerPlan();
-
-    @Data
-    public static class ServerPlan {
-        private int id = 0;
-        private String name = "";
-        private long ram = 0;
-        private float cpu = 0;
-    }
 }

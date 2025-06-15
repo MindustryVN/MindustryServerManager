@@ -12,12 +12,4 @@ public class ServerCommandDto {
     public String paramText;
     public String description;
     public List<CommandParamDto> params;
-
-    @Data
-    @Accessors(chain = true)
-    public static class CommandParamDto {
-        public String name;
-        public boolean optional;
-        public boolean variadic;
-    }
 }

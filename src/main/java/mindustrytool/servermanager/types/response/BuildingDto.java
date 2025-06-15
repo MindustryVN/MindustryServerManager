@@ -5,8 +5,9 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public class ModDto {
+public class BuildingDto {
+    private float x;
+    private float y;
     private String name;
-    private String filename;
-    private ModMetaDto meta;
+    private String lastAccess;
 }

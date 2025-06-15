@@ -5,8 +5,8 @@ import lombok.experimental.Accessors;
 
 @Data
 @Accessors(chain = true)
-public class ModDto {
-    private String name;
-    private String filename;
-    private ModMetaDto meta;
+public class CommandParamDto {
+    public String name;
+    public boolean optional;
+    public boolean variadic;
 }

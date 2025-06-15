@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
-import mindustrytool.servermanager.types.response.ModDto.ModMetaDto;
 
 @Data
 @Accessors(chain = true)
