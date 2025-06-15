@@ -27,7 +27,7 @@ public class SSE {
     }
 
     private static Mono<Many<String>> getContext(Context context) {
-        return context.<Mono<Many<String>>>get(CONTEXT_KEY);
+        return Mono.just(context.<Many<String>>get(CONTEXT_KEY));
     }
 
     public static Mono<Void> event(String message) {
@@ -41,20 +41,23 @@ public class SSE {
     public static Flux<String> create(Function<Consumer<String>, Flux<String>> func) {
         Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
 
-        return Flux.merge(func.apply(sink::tryEmitNext).onErrorResume(error -> {
-            error.printStackTrace();
+        return Flux.merge(
+                func.apply(sink::tryEmitNext)
+                        .contextWrite(Context.of(CONTEXT_KEY, sink))
+                        .onErrorResume(error -> {
+                            error.printStackTrace();
 
-            if (error instanceof ApiError apiError && apiError.status.value() < 500) {
-                sink.tryEmitNext(error.getMessage());
-            }
+                            if (error instanceof ApiError apiError && apiError.status.value() < 500) {
+                                sink.tryEmitNext(error.getMessage());
+                            }
 
-            sink.tryEmitError(error);
+                            sink.tryEmitError(error);
 
-            return Mono.empty();
+                            return Mono.empty();
 
-        })//
-                .doFinally(_ignore -> sink.tryEmitComplete()), sink.asFlux())
-                .contextWrite(context -> context.put(CONTEXT_KEY, Mono.just(sink)));
+                        })//
+                        .doFinally(_ignore -> sink.tryEmitComplete()),
+                sink.asFlux());
     }
 
 }
