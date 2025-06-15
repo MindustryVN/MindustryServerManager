@@ -78,6 +78,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
 import reactor.core.publisher.Sinks.EmitResult;
+import reactor.core.publisher.Sinks.Many;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.function.Tuple2;
 import reactor.util.function.Tuples;
@@ -416,7 +417,7 @@ public class ServerService {
     public Flux<String> hostFromServer(HostFromSeverRequest request) {
         return SSE.create(callback -> {
 
-            callback.accept("Init server: " + request.getInit().getId());
+            log.info("Init server: " + request.getInit().getId());
 
             if (request.getInit().getPort() <= 0) {
                 throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
@@ -1096,57 +1097,54 @@ public class ServerService {
     }
 
     public Flux<String> host(UUID serverId, HostServerRequest request) {
+        Many<String> sink = Sinks.many().multicast().onBackpressureBuffer();
 
         var gateway = gatewayService.of(serverId);
 
         log.info("Host server: " + serverId);
 
-        return gateway.getServer().isHosting().flatMapMany(isHosting -> {
-
+        var hostMono = gateway.getServer().isHosting().flatMapMany(isHosting -> {
             if (isHosting) {
                 Log.info("Server is hosting, do nothing");
                 return Flux.just("Server is hosting, do nothing");
             }
 
-            return Flux.create(sink -> {
+            var container = findContainerByServerId(serverId);
 
-                var container = findContainerByServerId(serverId);
+            if (container == null) {
+                Log.info("Server not initialized");
+                return ApiError.badRequest("Server not initialized");
+            }
 
-                if (container == null) {
-                    Log.info("Server not initialized");
-                    throw new ApiError(HttpStatus.BAD_REQUEST, "Server not initialized");
-                }
+            sink.tryEmitNext("Reading metadata");
 
-                sink.next("Reading metadata");
+            var server = readMetadataFromContainer(container).orElseThrow();
 
-                var server = readMetadataFromContainer(container).orElseThrow();
+            String[] preHostCommand = { //
+                    "config name %s".formatted(server.getInit().getName()), //
+                    "config desc %s".formatted(server.getInit().getDescription()), //
+                    "version"
+            };
 
-                String[] preHostCommand = { //
-                        "config name %s".formatted(server.getInit().getName()), //
-                        "config desc %s".formatted(server.getInit().getDescription()), //
-                        "version"
-                };
+            for (var command : preHostCommand) {
+                Log.info("Execute command: " + command);
+                sink.tryEmitNext("Execute command: " + command);
+            }
 
-                for (var command : preHostCommand) {
-                    Log.info("Execute command: " + command);
-                    sink.next("Execute command: " + command);
-                }
-
-                gateway.getServer()//
-                        .sendCommand(preHostCommand)//
-                        .then(gateway.getServer()
-                                .host(new HostServerRequest()// \
-                                        .setMode(request.getMode())
-                                        .setHostCommand(request.getHostCommand())))//
-                        .then(Mono.fromCallable(() -> sink.next("Wait for server status")))
-                        .then(waitForHosting(gateway))
-                        .then(syncStats(serverId))
-                        .then(Mono.fromCallable(() -> sink.next("Complete")))
-                        .doFinally(_ignore -> sink.complete())
-                        .subscribeOn(Schedulers.single())
-                        .subscribe();
-            });
+            return gateway.getServer()//
+                    .sendCommand(preHostCommand)//
+                    .then(gateway.getServer()
+                            .host(new HostServerRequest()// \
+                                    .setMode(request.getMode())
+                                    .setHostCommand(request.getHostCommand())))//
+                    .then(Mono.fromCallable(() -> sink.tryEmitNext("Wait for server status")))
+                    .then(waitForHosting(gateway))
+                    .then(syncStats(serverId))
+                    .doFinally(_ignore -> sink.tryEmitComplete())
+                    .thenMany(Flux.just("Complete"));
         });
+
+        return Flux.merge(sink.asFlux(), hostMono);
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
