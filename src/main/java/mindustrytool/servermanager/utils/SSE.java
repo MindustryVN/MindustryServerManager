@@ -40,6 +40,7 @@ public class SSE {
         Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
 
         return Flux.merge(
+                sink.asFlux(),
                 func.apply(sink::tryEmitNext)
                         .contextWrite(Context.of(CONTEXT_KEY, sink))
                         .onErrorResume(error -> {
@@ -54,8 +55,7 @@ public class SSE {
                             return Mono.empty();
 
                         })//
-                        .doFinally(_ignore -> sink.tryEmitComplete()),
-                sink.asFlux());
+                        .doFinally(_ignore -> sink.tryEmitComplete()));
     }
 
 }
