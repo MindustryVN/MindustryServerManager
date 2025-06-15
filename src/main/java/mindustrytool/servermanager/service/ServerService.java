@@ -1097,7 +1097,7 @@ public class ServerService {
 
         log.info("Host server: " + serverId);
 
-        return Flux.merge(gateway.getServer().isHosting().flatMapMany(isHosting -> {
+        var hostMono = gateway.getServer().isHosting().flatMapMany(isHosting -> {
             if (isHosting) {
                 Log.info("Server is hosting, do nothing");
                 return Flux.just("Server is hosting, do nothing");
@@ -1135,7 +1135,9 @@ public class ServerService {
                     .then(syncStats(serverId))
                     .doFinally(_ignore -> sink.tryEmitComplete())
                     .thenMany(Flux.just("Complete"));
-        }), sink.asFlux());
+        });
+
+        return Flux.merge(hostMono, sink.asFlux());
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {

@@ -30,7 +30,7 @@ public class SSE {
         return context.<Mono<Consumer<String>>>get(CONTEXT_KEY);
     }
 
-    public static Mono<Void> event(String message){
+    public static Mono<Void> event(String message) {
         return getContext()
                 .flatMap(event -> {
                     event.accept(message);
@@ -42,7 +42,8 @@ public class SSE {
         Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
 
         return Flux.merge(func.apply(sink::tryEmitNext).onErrorResume(error -> {
-
+            error.printStackTrace();
+            
             if (error instanceof ApiError apiError && apiError.status.value() < 500) {
                 sink.tryEmitNext(error.getMessage());
                 return Mono.empty();
