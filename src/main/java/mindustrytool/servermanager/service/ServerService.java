@@ -499,7 +499,7 @@ public class ServerService {
 
             return serverGateway//
                     .ok()
-                    .then(SSE.event("Server started, waiting for hosting"))
+                    .then(Mono.fromRunnable(() -> callback.accept("Server started, waiting for hosting")))
                     .thenMany(host(request.getInit().getId(), request.getHost()));
         });
     }
