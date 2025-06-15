@@ -154,7 +154,7 @@ public class GatewayService {
                         .uri("stats")
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
-                        .timeout(Duration.ofSeconds(5));
+                        .timeout(Duration.ofSeconds(1));
             }
 
             public Mono<byte[]> getImage() {
