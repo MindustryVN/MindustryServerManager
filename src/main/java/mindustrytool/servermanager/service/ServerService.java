@@ -586,7 +586,7 @@ public class ServerService {
                         // in bytes
                         .withMemory(request.getInit().getPlan().getRam() * 1024 * 1024)
                         .withCpuPeriod(1000_000L)
-                        .withCpuQuota((long) (request.getInit().getPlan().getCpu() * 1000 * 1000))
+                        .withCpuQuota((long) ((request.getInit().getPlan().getCpu() * 1000_000L)))
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
@@ -1335,7 +1335,7 @@ public class ServerService {
                             Long cpuCores = snapshots[1].getCpuStats().getOnlineCpus();
 
                             if (systemDelta != null && systemDelta > 0 && cpuCores != null && cpuCores > 0) {
-                                cpuPercent = (float) cpuDelta / systemDelta * cpuCores * 100.0f;
+                                cpuPercent = (cpuDelta / systemDelta * cpuCores * 100.0f);
                             }
                         }
 
