@@ -32,10 +32,8 @@ public class SSE {
 
     public static Mono<Void> event(String message) {
         return getContext()
-                .flatMap(event -> {
-                    event.tryEmitNext(message);
-                    return Mono.empty();
-                });
+                .doOnNext(event -> event.tryEmitNext(message))
+                .then();
     }
 
     public static Flux<String> create(Function<Consumer<String>, Flux<String>> func) {
