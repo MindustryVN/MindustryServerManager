@@ -292,7 +292,7 @@ public class ServerService {
 
         return Flux.fromIterable(containers)//
                 .map(container -> readMetadataFromContainer(container).orElseThrow())
-                .flatMap(server -> gatewayService.of(server.getInit().getId()).getServer().getStats())//
+                .flatMap(server -> stats(server.getInit().getId()))//
                 .map(stats -> stats.getPlayers())//
                 .collectList()//
                 .flatMap(list -> Mono.justOrEmpty(list.stream().reduce((prev, curr) -> prev + curr)))
@@ -1221,6 +1221,7 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
+                .log()
                 .onErrorResume(error -> {
                     error.printStackTrace();
                     return Mono.empty();
