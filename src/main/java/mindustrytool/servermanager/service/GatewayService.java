@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeoutException;
 
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
@@ -33,6 +34,7 @@ import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
@@ -100,7 +102,9 @@ public class GatewayService {
                         .uri("json")//
                         .retrieve()//
                         .bodyToMono(JsonNode.class)//
-                        .timeout(Duration.ofSeconds(15));
+                        .timeout(Duration.ofSeconds(15))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get json"));
             }
 
             public Mono<String> getPluginVersion() {
@@ -108,7 +112,9 @@ public class GatewayService {
                         .uri("plugin-version")//
                         .retrieve()//
                         .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(5));
+                        .timeout(Duration.ofSeconds(5))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get plugin version"));
             }
 
             public Mono<Void> setPlayer(MindustryPlayerDto request) {
@@ -118,6 +124,8 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(String.class)//
                         .timeout(Duration.ofSeconds(5))//
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when set player"))
                         .then();
             }
 
@@ -127,6 +135,8 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(Void.class)//
                         .timeout(Duration.ofSeconds(5))//
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when pause"))
                         .then();
             }
 
@@ -135,7 +145,9 @@ public class GatewayService {
                         .uri("players")//
                         .retrieve()//
                         .bodyToFlux(Player.class)//
-                        .timeout(Duration.ofSeconds(5));
+                        .timeout(Duration.ofSeconds(5))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get player"));
             }
 
             public Mono<Void> ok() {
@@ -144,7 +156,9 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(Void.class)//
                         .timeout(Duration.ofMillis(100))//
-                        .retryWhen(Retry.fixedDelay(100, Duration.ofMillis(500)));//
+                        .retryWhen(Retry.fixedDelay(100, Duration.ofMillis(500)))
+                        .onErrorMap(error -> Exceptions.isRetryExhausted(error),
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Fail to check for ok"));//
 
             }
 
@@ -153,7 +167,9 @@ public class GatewayService {
                         .uri("stats")
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
-                        .timeout(Duration.ofSeconds(2));
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get stats"));
             }
 
             public Mono<byte[]> getImage() {
@@ -162,7 +178,9 @@ public class GatewayService {
                         .accept(MediaType.IMAGE_PNG)
                         .retrieve()//
                         .bodyToMono(byte[].class)//
-                        .timeout(Duration.ofSeconds(5));
+                        .timeout(Duration.ofSeconds(5))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get image"));
             }
 
             public Mono<Void> sendCommand(String... command) {
@@ -171,7 +189,9 @@ public class GatewayService {
                         .bodyValue(command)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
-                        .timeout(Duration.ofSeconds(2));
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when send message"));
             }
 
             public Mono<Void> say(String message) {
@@ -180,7 +200,9 @@ public class GatewayService {
                         .bodyValue(message)//
                         .retrieve()//
                         .bodyToMono(Void.class)//
-                        .timeout(Duration.ofSeconds(2));
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when say"));
             }
 
             public Mono<Void> host(HostServerRequest request) {
@@ -189,7 +211,9 @@ public class GatewayService {
                         .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                         .retrieve()//
                         .bodyToMono(Void.class)//
-                        .timeout(Duration.ofSeconds(15));
+                        .timeout(Duration.ofSeconds(15))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when host"));
             }
 
             public Mono<Boolean> isHosting() {
@@ -198,7 +222,9 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(Boolean.class)//
                         .timeout(Duration.ofMillis(100))//
-                        .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)));
+                        .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)))
+                        .onErrorMap(error -> Exceptions.isRetryExhausted(error),
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Fail to check for hosting"));
             }
 
             public Flux<ServerCommandDto> getCommands() {
@@ -206,7 +232,9 @@ public class GatewayService {
                         .uri("commands")
                         .retrieve()//
                         .bodyToFlux(ServerCommandDto.class)//
-                        .timeout(Duration.ofSeconds(10));
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get commands"));
             }
 
             public Flux<PlayerInfoDto> getPlayers(int page, int size, Boolean banned, String filter) {
@@ -219,7 +247,9 @@ public class GatewayService {
                                 .build())
                         .retrieve()//
                         .bodyToFlux(PlayerInfoDto.class)//
-                        .timeout(Duration.ofSeconds(10));
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get players info"));
             }
 
             public Mono<Map<String, Long>> getKickedIps() {
@@ -228,7 +258,9 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(new ParameterizedTypeReference<Map<String, Long>>() {
                         })//
-                        .timeout(Duration.ofSeconds(10));
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get kicks"));
             }
 
             public Mono<JsonNode> getRoutes() {
@@ -236,7 +268,9 @@ public class GatewayService {
                         .uri("routes")
                         .retrieve()//
                         .bodyToMono(JsonNode.class)//
-                        .timeout(Duration.ofSeconds(10));
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get routes"));
             }
         }
 
@@ -258,7 +292,10 @@ public class GatewayService {
                         .uri("servers/" + id.toString() + "/players")//
                         .bodyValue(payload)//
                         .retrieve()//
-                        .bodyToMono(MindustryPlayerDto.class);
+                        .bodyToMono(MindustryPlayerDto.class)
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Backend timeout when set player"));
             }
 
             public Mono<Void> setStats(StatsDto payload) {
@@ -266,7 +303,10 @@ public class GatewayService {
                         .uri("servers/" + id.toString() + "/stats")//
                         .bodyValue(payload)//
                         .retrieve()//
-                        .bodyToMono(Void.class);
+                        .bodyToMono(Void.class)
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Backend timeout when set stats"));
             }
 
             public Mono<ApiServerDto> getServers(int page, int size) {
@@ -275,14 +315,19 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToFlux(ServerDto.class)//
                         .collectList()//
-                        .map(server -> new ApiServerDto().setServers(server));
+                        .map(server -> new ApiServerDto().setServers(server))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Backend timeout when get server"));
             }
 
             public Mono<String> host(String serverId) {
                 return webClient.method(HttpMethod.POST)
                         .uri("servers/" + serverId + "/host-from-server")//
                         .retrieve()//
-                        .bodyToMono(String.class);
+                        .bodyToMono(String.class)
+                        .timeout(Duration.ofSeconds(45))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Backend timeout when send host"));
             }
 
             public Mono<Void> sendChat(String chat) {
@@ -290,7 +335,10 @@ public class GatewayService {
                         .uri("servers/" + id.toString() + "/chat")//
                         .bodyValue(chat)//
                         .retrieve()//
-                        .bodyToMono(Void.class);
+                        .bodyToMono(Void.class)
+                        .timeout(Duration.ofSeconds(2))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Backend timeout when send chat"));
             }
 
             public Mono<Void> sendBuildLog(ArrayList<BuildLogDto> logs) {

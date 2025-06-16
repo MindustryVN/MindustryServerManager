@@ -1230,7 +1230,7 @@ public class ServerService {
                 .getServer()//
                 .getStats()//
                 .onErrorResume(error -> {
-                    error.printStackTrace();
+                    Log.err(error.getMessage());
                     return Mono.empty();
                 })
                 .defaultIfEmpty(new StatsDto().setStatus("NOT_RESPONSE"))
