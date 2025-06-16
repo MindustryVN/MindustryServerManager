@@ -627,8 +627,8 @@ public class ServerService {
                         .withNetworkMode("mindustry-server")//
                         // in bytes
                         .withMemory(request.getInit().getPlan().getRam() * 1024 * 1024)
-                        .withCpuPeriod(1000_000L)
-                        .withCpuQuota((long) ((request.getInit().getPlan().getCpu() * 1000_000L)))
+                        .withCpuPeriod(100000l)
+                        .withCpuQuota((long) ((request.getInit().getPlan().getCpu() * 100000)))
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
