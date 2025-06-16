@@ -3,6 +3,7 @@ package mindustrytool.servermanager.service;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLDecoder;
+import java.nio.channels.AsynchronousCloseException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -1221,7 +1222,6 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
-                .log()
                 .onErrorResume(error -> {
                     error.printStackTrace();
                     return Mono.empty();
@@ -1441,9 +1441,11 @@ public class ServerService {
 
             @Override
             public void onError(Throwable throwable) {
-                System.err
-                        .println("[" + serverId + "] Log stream error: " + throwable.getMessage());
-                throwable.printStackTrace();
+                if (!(throwable instanceof AsynchronousCloseException)) {
+                    System.err
+                            .println("[" + serverId + "] Log stream error: " + throwable.getMessage());
+                    throwable.printStackTrace();
+                }
                 removeConsoleStream(serverId);
             }
         };
