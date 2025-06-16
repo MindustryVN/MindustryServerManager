@@ -1226,13 +1226,7 @@ public class ServerService {
                     error.printStackTrace();
                     return Mono.empty();
                 })
-                .defaultIfEmpty(new StatsDto().setStatus(container == null //
-                        ? "DELETED"
-                        : container//
-                                .getState()//
-                                .equalsIgnoreCase("running")//
-                                        ? "NOT_RESPONSE"
-                                        : "DOWN"))
+                .defaultIfEmpty(new StatsDto().setStatus("NOT_RESPONSE"))
                 .map(serverStats -> {
 
                     var containerStats = stats.get(serverId);
