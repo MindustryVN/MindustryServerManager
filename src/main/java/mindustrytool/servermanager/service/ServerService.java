@@ -239,7 +239,7 @@ public class ServerService {
                                     var flag = serverFlags.get(server.getId());
 
                                     if (shouldKill) {
-                                        if (flag.contains(ServerFlag.KILL)) {
+                                        if (flag != null && flag.contains(ServerFlag.KILL)) {
                                             sendConsole(server.getId(),
                                                     "Auto shut down server: %s".formatted(server.getId()));
                                             return remove(server.getId());
@@ -254,7 +254,7 @@ public class ServerService {
                                             return Mono.empty();
                                         }
                                     } else {
-                                        if (flag.contains(ServerFlag.KILL)) {
+                                        if (flag != null && flag.contains(ServerFlag.KILL)) {
                                             serverFlags.getOrDefault(server.getId(), new ArrayList<>())
                                                     .remove(ServerFlag.KILL);
                                             log.info("Remove flag from server {}", server.getId());
