@@ -1320,8 +1320,8 @@ public class ServerService {
             Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer(10000);
 
             Disposable subscription = newSink.asFlux()
-                    .bufferTimeout(10000, Duration.ofMillis(500))
-                    .concatMap(batch -> gatewayService.of(serverId)//
+                    .bufferTimeout(1000, Duration.ofMillis(500))
+                    .flatMap(batch -> gatewayService.of(serverId)//
                             .getBackend()
                             .sendConsole(String.join("", batch))
                             .onErrorResume(e -> {
