@@ -142,10 +142,9 @@ public class GatewayService {
                 return webClient.method(HttpMethod.GET)
                         .uri("ok")
                         .retrieve()//
-                        .bodyToMono(String.class)//
+                        .bodyToMono(Void.class)//
                         .timeout(Duration.ofMillis(100))//
-                        .retryWhen(Retry.fixedDelay(100, Duration.ofMillis(500)))//
-                        .then();//
+                        .retryWhen(Retry.fixedDelay(100, Duration.ofMillis(500)));//
 
             }
 
@@ -189,9 +188,8 @@ public class GatewayService {
                         .uri("host")
                         .bodyValue(request.setMode(request.getMode().toLowerCase()))//
                         .retrieve()//
-                        .bodyToMono(String.class)//
-                        .timeout(Duration.ofSeconds(15))//
-                        .then();
+                        .bodyToMono(Void.class)//
+                        .timeout(Duration.ofSeconds(15));
             }
 
             public Mono<Boolean> isHosting() {
