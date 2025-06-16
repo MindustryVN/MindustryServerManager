@@ -415,17 +415,11 @@ public class ServerService {
             return Mono.just(new ServerWithStatsDto().setStatus("DELETED"));
         }
 
-        var containerStats = stats.get(id);
         var metadata = readMetadataFromContainer(container).orElseThrow();
 
         return stats(id)//
                 .map(stats -> {
                     var dto = modelMapper.map(metadata.getInit(), ServerWithStatsDto.class);
-                    if (containerStats != null) {
-                        stats.setCpuUsage(containerStats.cpuUsage())//
-                                .setTotalRam(containerStats.totalRam())//
-                                .setJvmRamUsage(containerStats.jvmRamUsage());
-                    }
                     return dto.setUsage(stats);
                 });
     }
@@ -1240,7 +1234,7 @@ public class ServerService {
                     if (containerStats != null) {
                         serverStats.setCpuUsage(containerStats.cpuUsage())//
                                 .setTotalRam(containerStats.totalRam())//
-                                .setRamUsage(containerStats.jvmRamUsage());
+                                .setJvmRamUsage(containerStats.jvmRamUsage());
                     }
 
                     return serverStats;
