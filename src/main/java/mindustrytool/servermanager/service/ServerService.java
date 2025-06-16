@@ -1325,6 +1325,7 @@ public class ServerService {
                             .getBackend()
                             .sendConsole(String.join("", batch))
                             .onErrorResume(e -> {
+                                Log.info("[" + serverId + "]: " + String.join("", batch));
                                 e.printStackTrace();
                                 return Mono.empty();
                             })) // preserve order
@@ -1339,7 +1340,6 @@ public class ServerService {
         });
 
         synchronized (sink) {
-            Log.info("[" + serverId + "]: " + message);
             var result = sink.tryEmitNext(message);
 
             if (result.isFailure()) {
