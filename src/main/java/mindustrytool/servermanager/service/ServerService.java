@@ -1339,6 +1339,7 @@ public class ServerService {
         });
 
         synchronized (sink) {
+            Log.info("[" + serverId + "]: " + message);
             var result = sink.tryEmitNext(message);
 
             if (result.isFailure()) {
