@@ -424,7 +424,7 @@ public class ServerService {
                     if (containerStats != null) {
                         stats.setCpuUsage(containerStats.cpuUsage())//
                                 .setTotalRam(containerStats.totalRam())//
-                                .setRamUsage(containerStats.ramUsage());
+                                .setJvmRamUsage(containerStats.ramUsage());
                     }
                     return dto.setUsage(stats);
                 });
