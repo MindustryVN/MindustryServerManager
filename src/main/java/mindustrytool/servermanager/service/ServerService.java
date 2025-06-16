@@ -95,7 +95,12 @@ public class ServerService {
     private final GatewayService gatewayService;
     private final DockerService dockerService;
 
-    private final ConcurrentHashMap<UUID, Boolean> serverKillFlags = new ConcurrentHashMap<>();
+    private enum ServerFlag {
+        KILL,
+        RESTART
+    }
+
+    private final ConcurrentHashMap<UUID, ServerFlag> serverFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
     private final Json json = new Json();
 
@@ -199,8 +204,8 @@ public class ServerService {
                                     .flatMap(stats -> {
                                         if (!stats.isHosting()) {
                                             sendConsole(server.getId(),
-                                                    "Restart server " + server.getId()
-                                                            + " due to running but not hosting");
+                                                    "Restart server [%s] due to running but not hosting".formatted(
+                                                            server.getId()));
 
                                             return restart(server.getId())
                                                     .thenReturn(gatewayService.of(server.getId()).getBackend())
@@ -220,26 +225,28 @@ public class ServerService {
                                 .flatMap(players -> {
                                     boolean shouldKill = players.isEmpty();
 
-                                    var killFlag = serverKillFlags.containsKey(server.getId());
+                                    var flag = serverFlags.get(server.getId());
 
                                     if (shouldKill) {
-                                        if (killFlag) {
-                                            sendConsole(server.getId(), "Auto shut down server: " + server.getId());
+                                        if (flag == ServerFlag.KILL) {
+                                            sendConsole(server.getId(),
+                                                    "Auto shut down server: %s".formatted(server.getId()));
                                             return remove(server.getId());
                                         } else {
                                             log.info("Server {} has no players, flag to kill.", server.getId());
-                                            serverKillFlags.put(server.getId(), true);
+                                            serverFlags.put(server.getId(), ServerFlag.KILL);
                                             sendConsole(server.getId(),
-                                                    "Server " + server.getId() + " has no players, flag to kill");
+                                                    "Server [%s] has no players, flag to kill"
+                                                            .formatted(server.getId()));
 
                                             return Mono.empty();
                                         }
                                     } else {
-                                        if (killFlag) {
-                                            serverKillFlags.put(server.getId(), false);
+                                        if (flag == ServerFlag.KILL) {
+                                            serverFlags.remove(server.getId());
                                             log.info("Remove flag from server {}", server.getId());
                                             sendConsole(server.getId(),
-                                                    "Remove kill flag from server  " + server.getId());
+                                                    "Remove kill flag from server: %s".formatted(server.getId()));
                                             return Mono.empty();
                                         }
                                     }
@@ -257,7 +264,7 @@ public class ServerService {
                             dockerClient.removeContainerCmd(container.getId()).exec();
 
                             sendConsole(server.getId(),
-                                    "Remove server " + server.getId() + " due to mismatch version hash");
+                                    "Remove server [%s] due to mismatch version hash".formatted(server.getId()));
                         }
                         return Mono.empty();
                     }
