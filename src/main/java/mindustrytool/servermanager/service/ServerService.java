@@ -115,7 +115,7 @@ public class ServerService {
 
     private record ContainerStats(
             float cpuUsage,
-            float ramUsage, // in MB
+            float jvmRamUsage, // in MB
             float totalRam // in MB
     ) {
     }
@@ -424,7 +424,7 @@ public class ServerService {
                     if (containerStats != null) {
                         stats.setCpuUsage(containerStats.cpuUsage())//
                                 .setTotalRam(containerStats.totalRam())//
-                                .setJvmRamUsage(containerStats.ramUsage());
+                                .setJvmRamUsage(containerStats.jvmRamUsage());
                     }
                     return dto.setUsage(stats);
                 });
@@ -1240,7 +1240,7 @@ public class ServerService {
                     if (containerStats != null) {
                         serverStats.setCpuUsage(containerStats.cpuUsage())//
                                 .setTotalRam(containerStats.totalRam())//
-                                .setRamUsage(containerStats.ramUsage());
+                                .setRamUsage(containerStats.jvmRamUsage());
                     }
 
                     return serverStats;

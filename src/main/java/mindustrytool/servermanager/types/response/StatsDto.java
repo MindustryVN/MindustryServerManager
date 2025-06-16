@@ -11,7 +11,7 @@ import lombok.experimental.Accessors;
 public class StatsDto {
     private long tps;
     private float ramUsage = 0;
-    private float jvmRamUsage = 0;
+    private float jvmRamUsage = -1;
     private float totalRam = 0;
     private float cpuUsage = 0l;
     private long players = 0;
