@@ -653,6 +653,11 @@ public class ServerService {
         return Mono.zipDelayError(stats(serverId), getMods(serverId).collectList()).map(zip -> {
             var stats = zip.getT1();
             var mods = zip.getT2();
+
+            if (stats.getStatus().equals("NOT_RESPONSE")) {
+                return List.of("Server not response");
+            }
+
             List<String> result = new ArrayList<>();
 
             var meta = readMetadataFromContainer(container).orElseThrow();
