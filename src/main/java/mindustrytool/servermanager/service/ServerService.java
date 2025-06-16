@@ -1216,7 +1216,10 @@ public class ServerService {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .getStats()//
-                .onErrorResume(_ignore -> Mono.empty())
+                .onErrorResume(error -> {
+                    error.printStackTrace();
+                    return Mono.empty();
+                })
                 .defaultIfEmpty(new StatsDto().setStatus(container == null //
                         ? "DELETED"
                         : container//
