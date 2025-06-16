@@ -129,15 +129,14 @@ public class GatewayService {
                         .then();
             }
 
-            public Mono<Void> pause() {
+            public Mono<Boolean> pause() {
                 return webClient.method(HttpMethod.POST)//
                         .uri("pause")//
                         .retrieve()//
-                        .bodyToMono(Void.class)//
+                        .bodyToMono(Boolean.class)//
                         .timeout(Duration.ofSeconds(5))//
                         .onErrorMap(TimeoutException.class,
-                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when pause"))
-                        .then();
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when pause"));
             }
 
             public Flux<Player> getPlayers() {

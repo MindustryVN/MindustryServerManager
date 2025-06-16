@@ -379,11 +379,11 @@ public class ServerService {
         return syncStats(serverId);
     }
 
-    public Mono<Void> pause(UUID serverId) {
+    public Mono<Boolean> pause(UUID serverId) {
         return gatewayService.of(serverId)//
                 .getServer()//
                 .pause()//
-                .then(syncStats(serverId));
+                .flatMap(res -> syncStats(serverId).thenReturn(res));
     }
 
     public Flux<ServerWithStatsDto> getServers() {

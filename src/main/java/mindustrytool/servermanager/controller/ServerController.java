@@ -171,7 +171,7 @@ public class ServerController {
     }
 
     @PostMapping("/servers/{id}/pause")
-    public Mono<Void> pause(@PathVariable("id") UUID serverId) {
+    public Mono<Boolean> pause(@PathVariable("id") UUID serverId) {
         return serverService.pause(serverId);
     }
 
