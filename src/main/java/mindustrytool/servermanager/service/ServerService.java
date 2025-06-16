@@ -202,7 +202,7 @@ public class ServerService {
                                                     "Restart server " + server.getId()
                                                             + " due to running but not hosting");
 
-                                            return remove(server.getId())
+                                            return restart(server.getId())
                                                     .thenReturn(gatewayService.of(server.getId()).getBackend())
                                                     .flatMap(backend -> backend.host(server.getId().toString()))
                                                     .then(syncStats(server.getId()));
@@ -323,8 +323,6 @@ public class ServerService {
             return Mono.empty();
         }
 
-        log.info("Found %s container to stop".formatted(container.getId()));
-
         if (container.getState().equalsIgnoreCase("running")) {
             dockerClient.stopContainerCmd(container.getId()).exec();
             log.info("Stopped: " + container.getNames()[0]);
@@ -332,6 +330,24 @@ public class ServerService {
 
         dockerClient.removeContainerCmd(container.getId()).exec();
         log.info("Removed: " + container.getNames()[0]);
+
+        return syncStats(serverId);
+    }
+
+    public Mono<Void> restart(UUID serverId) {
+        var container = findContainerByServerId(serverId);
+
+        if (container == null) {
+            log.info("Container not found: " + serverId);
+            return Mono.empty();
+        }
+
+        if (container.getState().equalsIgnoreCase("running")) {
+            dockerClient.stopContainerCmd(container.getId()).exec();
+            log.info("Stopped: " + container.getNames()[0]);
+        }
+
+        dockerClient.startContainerCmd(container.getId()).exec();
 
         return syncStats(serverId);
     }
