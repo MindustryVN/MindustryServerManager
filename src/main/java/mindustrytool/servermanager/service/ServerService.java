@@ -100,7 +100,7 @@ public class ServerService {
         RESTART
     }
 
-    private final ConcurrentHashMap<UUID, ServerFlag> serverFlags = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, List<ServerFlag>> serverFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
     private final Json json = new Json();
 
@@ -203,14 +203,24 @@ public class ServerService {
                             return stats(server.getId())//
                                     .flatMap(stats -> {
                                         if (!stats.isHosting()) {
-                                            sendConsole(server.getId(),
-                                                    "Restart server [%s] due to running but not hosting".formatted(
-                                                            server.getId()));
+                                            var flag = serverFlags.get(server.getId());
 
-                                            return restart(server.getId())
-                                                    .thenReturn(gatewayService.of(server.getId()).getBackend())
-                                                    .flatMap(backend -> backend.host(server.getId().toString()))
-                                                    .then(syncStats(server.getId()));
+                                            if (flag == null) {
+                                                serverFlags.getOrDefault(server.getId(), new ArrayList<>())
+                                                        .add(ServerFlag.RESTART);
+                                            } else if (flag.contains(ServerFlag.RESTART)) {
+                                                sendConsole(server.getId(),
+                                                        "Restart server [%s] due to running but not hosting".formatted(
+                                                                server.getId()));
+
+                                                return restart(server.getId())
+                                                        .thenReturn(gatewayService.of(server.getId()).getBackend())
+                                                        .flatMap(backend -> backend.host(server.getId().toString()))
+                                                        .then(syncStats(server.getId()));
+                                            }
+                                        } else {
+                                            serverFlags.getOrDefault(server.getId(), new ArrayList<>())
+                                                    .remove(ServerFlag.RESTART);
                                         }
 
                                         return Mono.empty();
@@ -228,13 +238,14 @@ public class ServerService {
                                     var flag = serverFlags.get(server.getId());
 
                                     if (shouldKill) {
-                                        if (flag == ServerFlag.KILL) {
+                                        if (flag.contains(ServerFlag.KILL)) {
                                             sendConsole(server.getId(),
                                                     "Auto shut down server: %s".formatted(server.getId()));
                                             return remove(server.getId());
                                         } else {
                                             log.info("Server {} has no players, flag to kill.", server.getId());
-                                            serverFlags.put(server.getId(), ServerFlag.KILL);
+                                            serverFlags.getOrDefault(server.getId(), new ArrayList<>())
+                                                    .add(ServerFlag.KILL);
                                             sendConsole(server.getId(),
                                                     "Server [%s] has no players, flag to kill"
                                                             .formatted(server.getId()));
@@ -242,8 +253,9 @@ public class ServerService {
                                             return Mono.empty();
                                         }
                                     } else {
-                                        if (flag == ServerFlag.KILL) {
-                                            serverFlags.remove(server.getId());
+                                        if (flag.contains(ServerFlag.KILL)) {
+                                            serverFlags.getOrDefault(server.getId(), new ArrayList<>())
+                                                    .remove(ServerFlag.KILL);
                                             log.info("Remove flag from server {}", server.getId());
                                             sendConsole(server.getId(),
                                                     "Remove kill flag from server: %s".formatted(server.getId()));
