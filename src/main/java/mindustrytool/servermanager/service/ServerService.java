@@ -351,7 +351,7 @@ public class ServerService {
         dockerClient.removeContainerCmd(container.getId()).exec();
         log.info("Removed: " + container.getNames()[0]);
 
-        return syncStats(serverId);
+        return Mono.empty();
     }
 
     public Mono<Void> restart(UUID serverId) {
