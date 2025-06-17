@@ -1187,11 +1187,11 @@ public class ServerService {
                     .then(Mono.fromCallable(() -> sink.tryEmitNext("Wait for server status")))
                     .then(waitForHosting(gateway))
                     .then(syncStats(serverId))
-                    .doFinally(_ignore -> sink.tryEmitComplete())
                     .thenMany(Flux.just("Complete"));
         });
 
-        return Flux.merge(sink.asFlux(), hostMono);
+        return Flux.merge(sink.asFlux(), hostMono                    .doFinally(_ignore -> sink.tryEmitComplete())
+);
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
