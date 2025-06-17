@@ -267,4 +267,14 @@ public class ServerController {
         serverService.deleteManagerMod(filename);
     }
 
+    @GetMapping("servers/{id}/workflow/nodes")
+    public Mono<JsonNode> getWorkflowNodes(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getWorkflowNodes();
+    }
+
+    @PostMapping("servers/{id}/workflow")
+    public Mono<JsonNode> loadWorkflow(@PathVariable("id") UUID serverId, @Validated @RequestBody JsonNode payload) {
+        return gatewayService.of(serverId).getServer().loadWorkflow(payload);
+    }
+
 }
