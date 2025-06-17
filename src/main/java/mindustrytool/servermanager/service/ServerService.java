@@ -35,6 +35,7 @@ import com.github.dockerjava.api.model.Event;
 import com.github.dockerjava.api.model.ExposedPort;
 import com.github.dockerjava.api.model.Frame;
 import com.github.dockerjava.api.model.HostConfig;
+import com.github.dockerjava.api.model.LogConfig;
 import com.github.dockerjava.api.model.Ports;
 import com.github.dockerjava.api.model.PullResponseItem;
 import com.github.dockerjava.api.model.RestartPolicy;
@@ -634,6 +635,10 @@ public class ServerService {
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.onFailureRestart(5))
                         .withAutoRemove(request.getInit().isAutoTurnOff())
+                        .withLogConfig(new LogConfig(LogConfig.LoggingType.JSON_FILE, Map.of(
+                                "max-size", "100m",
+                                "max-file", "5"//
+                        )))
                         .withBinds(bind));
 
         var result = command.exec();
