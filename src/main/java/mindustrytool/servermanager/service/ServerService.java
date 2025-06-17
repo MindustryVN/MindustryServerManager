@@ -170,6 +170,82 @@ public class ServerService {
         }
     }
 
+    private EnumSet<ServerFlag> getFlags(UUID id) {
+        return serverFlags.computeIfAbsent(id, (_ignore) -> EnumSet.noneOf(ServerFlag.class));
+    }
+
+    private Mono<Void> checkRunningServer(Container container, ServerContainerMetadata metadata) {
+        var server = metadata.getInit();
+
+        if (metadata.getInit().isAutoTurnOff() == false) {
+            var flag = getFlags(server.getId());
+
+            return stats(server.getId()).flatMap(stats -> {
+                if (stats.isHosting()) {
+                    flag.remove(ServerFlag.RESTART);
+                } else {
+                    if (flag.contains(ServerFlag.RESTART)) {
+                        sendConsole(server.getId(), "Restart server [%s] due to running but not hosting".formatted(
+                                server.getId()));
+
+                        return restart(server.getId())
+                                .thenReturn(gatewayService.of(server.getId()).getBackend())
+                                .flatMap(backend -> backend.host(server.getId().toString()))
+                                .then(syncStats(server.getId()));
+
+                    } else if (flag.contains(ServerFlag.RESTART)) {
+                        flag.add(ServerFlag.RESTART);
+                        sendConsole(server.getId(),
+                                "Flag server [%s] to restart due to running but not hosting".formatted(server.getId()));
+                    }
+                }
+
+                return Mono.empty();
+            });
+        }
+
+        return gatewayService.of(server.getId())//
+                .getServer()//
+                .getPlayers()//
+                .collectList()//
+                .onErrorReturn((List.of()))
+                .flatMap(players -> {
+                    boolean shouldKill = players.isEmpty();
+
+                    var flag = getFlags(server.getId());
+
+                    if (shouldKill) {
+                        if (flag != null && flag.contains(ServerFlag.KILL)) {
+                            sendConsole(server.getId(), "Auto shut down server: %s".formatted(server.getId()));
+                            flag.remove(ServerFlag.KILL);
+
+                            return remove(server.getId());
+                        } else {
+                            log.info("Server {} has no players, flag to kill.", server.getId());
+                            flag.add(ServerFlag.KILL);
+
+                            sendConsole(server.getId(),
+                                    "Server [%s] has no players, flag to kill".formatted(server.getId()));
+
+                            return Mono.empty();
+                        }
+                    } else {
+                        if (flag != null && flag.contains(ServerFlag.KILL)) {
+                            sendConsole(server.getId(), "Remove kill flag from server: %s".formatted(server.getId()));
+                            flag.remove(ServerFlag.KILL);
+                            log.info("Remove flag from server {}", server.getId());
+
+                            return Mono.empty();
+                        }
+                    }
+
+                    return Mono.empty();
+                })//
+                .retry(5)//
+                .doOnError(error -> sendConsole(server.getId(), "Error: " + error.getMessage()))
+                .onErrorComplete();
+    }
+
     @Scheduled(fixedDelay = 5, timeUnit = TimeUnit.MINUTES)
     private void cron() {
         var containers = dockerClient.listContainersCmd()//
@@ -191,86 +267,11 @@ public class ServerService {
                     }
 
                     var metadata = optional.orElseThrow();
-                    var server = metadata.getInit();
 
                     var isRunning = container.getState().equalsIgnoreCase("running");
 
                     if (isRunning) {
-                        if (metadata.getInit().isAutoTurnOff() == false) {
-                            return stats(server.getId())//
-                                    .flatMap(stats -> {
-                                        if (!stats.isHosting()) {
-                                            var flag = serverFlags.get(server.getId());
-
-                                            if (flag == null) {
-                                                serverFlags
-                                                        .computeIfAbsent(server.getId(),
-                                                                (_ignore) -> EnumSet.noneOf(ServerFlag.class))
-                                                        .add(ServerFlag.RESTART);
-                                            } else if (flag.contains(ServerFlag.RESTART)) {
-                                                sendConsole(server.getId(),
-                                                        "Restart server [%s] due to running but not hosting".formatted(
-                                                                server.getId()));
-
-                                                return restart(server.getId())
-                                                        .thenReturn(gatewayService.of(server.getId()).getBackend())
-                                                        .flatMap(backend -> backend.host(server.getId().toString()))
-                                                        .then(syncStats(server.getId()));
-                                            }
-                                        } else {
-                                            serverFlags.computeIfAbsent(server.getId(),
-                                                    (_ignore) -> EnumSet.noneOf(ServerFlag.class))
-                                                    .remove(ServerFlag.RESTART);
-                                        }
-
-                                        return Mono.empty();
-                                    });
-                        }
-
-                        return gatewayService.of(server.getId())//
-                                .getServer()//
-                                .getPlayers()//
-                                .collectList()//
-                                .onErrorReturn((List.of()))
-                                .flatMap(players -> {
-                                    boolean shouldKill = players.isEmpty();
-
-                                    var flag = serverFlags.computeIfAbsent(server.getId(),
-                                            (_ignore) -> EnumSet.noneOf(ServerFlag.class));
-
-                                    if (shouldKill) {
-                                        if (flag != null && flag.contains(ServerFlag.KILL)) {
-                                            sendConsole(server.getId(),
-                                                    "Auto shut down server: %s".formatted(server.getId()));
-                                            return remove(server.getId());
-                                        } else {
-                                            log.info("Server {} has no players, flag to kill.", server.getId());
-                                            serverFlags.computeIfAbsent(server.getId(),
-                                                    (_ignore) -> EnumSet.noneOf(ServerFlag.class))
-                                                    .add(ServerFlag.KILL);
-                                            sendConsole(server.getId(),
-                                                    "Server [%s] has no players, flag to kill"
-                                                            .formatted(server.getId()));
-
-                                            return Mono.empty();
-                                        }
-                                    } else {
-                                        if (flag != null && flag.contains(ServerFlag.KILL)) {
-                                            serverFlags.computeIfAbsent(server.getId(),
-                                                    (_ignore) -> EnumSet.noneOf(ServerFlag.class))
-                                                    .remove(ServerFlag.KILL);
-                                            log.info("Remove flag from server {}", server.getId());
-                                            sendConsole(server.getId(),
-                                                    "Remove kill flag from server: %s".formatted(server.getId()));
-                                            return Mono.empty();
-                                        }
-                                    }
-
-                                    return Mono.empty();
-                                })//
-                                .retry(5)//
-                                .doOnError(error -> sendConsole(server.getId(), "Error: " + error.getMessage()))
-                                .onErrorComplete();
+                        return checkRunningServer(container, metadata);
                     }
                     return Mono.empty();
                 })//
