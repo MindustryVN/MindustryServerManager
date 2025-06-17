@@ -374,7 +374,6 @@ public class ServerService {
 
     public Flux<ServerWithStatsDto> getServers() {
         var containers = dockerClient.listContainersCmd()//
-                .withShowAll(true)//
                 .withLabelFilter(List.of(Config.serverLabelName))//
                 .exec();
 
