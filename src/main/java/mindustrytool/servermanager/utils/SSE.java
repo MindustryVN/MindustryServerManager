@@ -46,6 +46,12 @@ public class SSE {
                         .onErrorResume(error -> {
                             error.printStackTrace();
 
+                            if (error instanceof ApiError apiError && apiError.status.value() < 500) {
+                                sink.tryEmitNext(error.getMessage());
+                            }
+
+                            sink.tryEmitError(error);
+
                             return Mono.empty();
 
                         })//
