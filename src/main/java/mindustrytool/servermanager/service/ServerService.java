@@ -195,12 +195,6 @@ public class ServerService {
 
                     var isRunning = container.getState().equalsIgnoreCase("running");
 
-                    var self = dockerService.getSelf();
-                    var serverImage = dockerClient.inspectImageCmd(server.getImage()).exec();
-
-                    var isSameServerHash = metadata.getServerImageHash().equals(serverImage.getId());
-                    var isSameManagerHash = metadata.getServerManagerImageHash().equals(self.getId());
-
                     if (isRunning) {
                         if (metadata.getInit().isAutoTurnOff() == false) {
                             return stats(server.getId())//
@@ -277,18 +271,8 @@ public class ServerService {
                                 .retry(5)//
                                 .doOnError(error -> sendConsole(server.getId(), "Error: " + error.getMessage()))
                                 .onErrorComplete();
-                    } else {
-                        if (!isSameManagerHash || !isSameServerHash) {
-                            if (container.getState().equalsIgnoreCase("running")) {
-                                dockerClient.stopContainerCmd(container.getId()).exec();
-                            }
-                            dockerClient.removeContainerCmd(container.getId()).exec();
-
-                            sendConsole(server.getId(),
-                                    "Remove server [%s] due to mismatch version hash".formatted(server.getId()));
-                        }
-                        return Mono.empty();
                     }
+                    return Mono.empty();
                 })//
                 .blockLast();
     }
@@ -459,42 +443,6 @@ public class ServerService {
 
             if (request.getInit().getPort() <= 0) {
                 throw new ApiError(HttpStatus.BAD_GATEWAY, "Invalid port number");
-            }
-
-            var containerOnRequestPort = dockerClient.listContainersCmd()//
-                    .withShowAll(true)//
-                    .withLabelFilter(List.of(Config.serverLabelName))//
-                    .exec();
-
-            for (var container : containerOnRequestPort) {
-
-                for (var port : container.getPorts()) {
-
-                    var optional = readMetadataFromContainer(container);
-
-                    if (optional.isEmpty()) {
-                        callback.accept("Container " + container.getId() + " has no metadata");
-                        dockerClient.removeConfigCmd(container.getId()).exec();
-                        continue;
-                    }
-
-                    var metadata = optional.get();
-
-                    var hasSamePort = port.getPublicPort() == request.getInit().getPort();
-                    var hasSameId = request.getInit().getId().equals(metadata.getInit().getId());
-
-                    if (hasSamePort && !hasSameId) {
-                        callback.accept("Port " + request.getInit().getPort() + " is already used by container: "
-                                + container.getId()
-                                + " attempt to delete it");
-
-                        if (container.getState().equalsIgnoreCase("running")) {
-                            dockerClient.stopContainerCmd(container.getId()).exec();
-                        }
-                        dockerClient.removeContainerCmd(container.getId()).exec();
-                        break;
-                    }
-                }
             }
 
             String containerId = null;
