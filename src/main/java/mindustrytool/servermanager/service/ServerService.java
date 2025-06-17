@@ -455,6 +455,11 @@ public class ServerService {
             if (containers.isEmpty()) {
                 callback.accept("Container " + request.getInit().getId() + " got deleted, creating new");
                 containerId = createNewServerContainer(request, callback);
+            } else if (containers.size() != 1) {
+                for (var container : containers) {
+                    dockerClient.removeContainerCmd(container.getId()).exec();
+                }
+                containerId = createNewServerContainer(request, callback);
             } else {
                 var container = containers.get(0);
                 containerId = container.getId();
