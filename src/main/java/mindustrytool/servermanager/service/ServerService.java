@@ -1190,8 +1190,7 @@ public class ServerService {
                     .thenMany(Flux.just("Complete"));
         });
 
-        return Flux.merge(sink.asFlux(), hostMono                    .doFinally(_ignore -> sink.tryEmitComplete())
-);
+        return Flux.merge(sink.asFlux(), hostMono.doFinally(_ignore -> sink.tryEmitComplete()));
     }
 
     private Mono<Void> waitForHosting(GatewayClient gateway) {
