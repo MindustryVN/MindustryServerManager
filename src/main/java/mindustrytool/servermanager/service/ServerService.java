@@ -1272,33 +1272,14 @@ public class ServerService {
 
             Disposable subscription = newSink.asFlux()
                     .bufferTimeout(100, Duration.ofMillis(500))
-                    .flatMap(batch -> {
-                        StringBuilder builder = new StringBuilder();
-
-                        int counter = 0;
-                        String previous = null;
-                        for (var item : batch) {
-                            if (previous != null && item.equals(previous)) {
-                                counter++;
-                            } else {
-                                if (counter > 0) {
-                                    builder.append(previous + "(" + counter + ")");
-                                    counter = 0;
-                                }
-                                builder.append(item);
-                            }
-                            previous = item;
-                        }
-
-                        return gatewayService.of(serverId)//
-                                .getBackend()
-                                .sendConsole(String.join("", batch))
-                                .onErrorResume(e -> {
-                                    Log.info("[" + serverId + "]: " + String.join("", batch));
-                                    e.printStackTrace();
-                                    return Mono.empty();
-                                });
-                    }) // preserve order
+                    .flatMap(batch -> gatewayService.of(serverId)//
+                            .getBackend()
+                            .sendConsole(String.join("", batch))
+                            .onErrorResume(e -> {
+                                Log.info("[" + serverId + "]: " + String.join("", batch));
+                                e.printStackTrace();
+                                return Mono.empty();
+                            }))
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
                             null,
