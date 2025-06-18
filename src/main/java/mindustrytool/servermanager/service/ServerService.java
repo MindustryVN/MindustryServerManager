@@ -18,6 +18,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.http.HttpStatus;
@@ -103,6 +104,7 @@ public class ServerService {
         RESTART
     }
 
+    private final ConcurrentHashMap<UUID, Object> serverLocks = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, EnumSet<ServerFlag>> serverFlags = new ConcurrentHashMap<>();
     private final Map<UUID, Statistics[]> statsSnapshots = new ConcurrentHashMap<>();
     private final Json json = new Json();
@@ -123,6 +125,22 @@ public class ServerService {
 
     private final HashMap<UUID, ContainerStats> stats = new HashMap<>();
 
+    private <T> T lock(UUID id, Supplier<T> fn) {
+        Object lock = serverLocks.computeIfAbsent(id, _ignore -> new Object());
+
+        synchronized (lock) {
+            return fn.get();
+        }
+    }
+
+    private void lock(UUID id, Runnable fn) {
+        Object lock = serverLocks.computeIfAbsent(id, _ignore -> new Object());
+
+        synchronized (lock) {
+            fn.run();
+        }
+    }
+
     @PostConstruct
     private void init() {
         dockerClient.eventsCmd()
@@ -131,7 +149,10 @@ public class ServerService {
                     @Override
                     public void onNext(Event event) {
                         String containerId = event.getId();
-                        var containers = dockerClient.listContainersCmd().withIdFilter(List.of(containerId)).exec();
+
+                        var containers = dockerClient.listContainersCmd()
+                                .withIdFilter(List.of(containerId))
+                                .exec();
 
                         if (containers.size() != 1) {
                             return;
@@ -329,40 +350,44 @@ public class ServerService {
     }
 
     public Mono<Void> remove(UUID serverId) {
-        var container = findContainerByServerId(serverId);
+        lock(serverId, () -> {
+            var container = findContainerByServerId(serverId);
 
-        if (container == null) {
-            log.info("Container not found: " + serverId);
-            return Mono.empty();
-        }
+            if (container == null) {
+                log.info("Container not found: " + serverId);
+                return;
+            }
 
-        if (container.getState().equalsIgnoreCase("running")) {
-            dockerClient.stopContainerCmd(container.getId()).exec();
-            log.info("Stopped: " + container.getNames()[0]);
-        }
+            if (container.getState().equalsIgnoreCase("running")) {
+                dockerClient.stopContainerCmd(container.getId()).exec();
+                log.info("Stopped: " + container.getNames()[0]);
+            }
 
-        dockerClient.removeContainerCmd(container.getId()).exec();
-        log.info("Removed: " + container.getNames()[0]);
+            dockerClient.removeContainerCmd(container.getId()).exec();
+            log.info("Removed: " + container.getNames()[0]);
+        });
 
         return Mono.empty();
     }
 
     public Mono<Void> restart(UUID serverId) {
-        var container = findContainerByServerId(serverId);
+        return lock(serverId, () -> {
+            var container = findContainerByServerId(serverId);
 
-        if (container == null) {
-            log.info("Container not found: " + serverId);
-            return Mono.empty();
-        }
+            if (container == null) {
+                log.info("Container not found: " + serverId);
+                return Mono.empty();
+            }
 
-        if (container.getState().equalsIgnoreCase("running")) {
-            dockerClient.stopContainerCmd(container.getId()).exec();
-            log.info("Stopped: " + container.getNames()[0]);
-        }
+            if (container.getState().equalsIgnoreCase("running")) {
+                dockerClient.stopContainerCmd(container.getId()).exec();
+                log.info("Stopped: " + container.getNames()[0]);
+            }
 
-        dockerClient.startContainerCmd(container.getId()).exec();
+            dockerClient.startContainerCmd(container.getId()).exec();
 
-        return syncStats(serverId);
+            return syncStats(serverId);
+        });
     }
 
     public Mono<Boolean> pause(UUID serverId) {
