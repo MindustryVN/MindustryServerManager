@@ -1296,14 +1296,34 @@ public class ServerService {
 
             Disposable subscription = newSink.asFlux()
                     .bufferTimeout(100, Duration.ofMillis(500))
-                    .flatMap(batch -> gatewayService.of(serverId)//
-                            .getBackend()
-                            .sendConsole(String.join("", batch))
-                            .onErrorResume(e -> {
-                                Log.info("[" + serverId + "]: " + String.join("", batch));
-                                e.printStackTrace();
-                                return Mono.empty();
-                            }))
+                    .flatMap(batch -> {
+
+                        String last = null;
+                        int counter = 1;
+                        StringBuilder result = new StringBuilder();
+
+                        for (var item : batch) {
+                            if (item.equals(last)) {
+                                counter++;
+                            } else {
+                                if (counter > 1) {
+                                    result.append(last + " (" + counter + ")");
+                                }
+                                result.append(item);
+                                counter = 1;
+                                last = item;
+                            }
+                        }
+
+                        return gatewayService.of(serverId)//
+                                .getBackend()
+                                .sendConsole(String.join("", batch))
+                                .onErrorResume(e -> {
+                                    Log.info("[" + serverId + "]: " + String.join("", batch));
+                                    e.printStackTrace();
+                                    return Mono.empty();
+                                });
+                    })
                     .subscribeOn(Schedulers.boundedElastic())
                     .subscribe(
                             null,
