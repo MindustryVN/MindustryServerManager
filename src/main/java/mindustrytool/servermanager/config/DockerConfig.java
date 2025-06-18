@@ -24,12 +24,9 @@ public class DockerConfig {
 
     @Bean
     DockerHttpClient httpClient(DockerClientConfig config) {
-        System.out.println("Docker host: " + config.getDockerHost());
-
         return new ApacheDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())//
                 .sslConfig(config.getSSLConfig())//
-                .maxConnections(20)//
                 .connectionTimeout(Duration.ofSeconds(5))//
                 .responseTimeout(Duration.ofSeconds(5))//
                 .build();
