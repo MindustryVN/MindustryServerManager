@@ -27,7 +27,7 @@ public class DockerConfig {
         return new ApacheDockerHttpClient.Builder()
                 .dockerHost(config.getDockerHost())//
                 .sslConfig(config.getSSLConfig())//
-                .connectionTimeout(Duration.ofSeconds(5))//
+                .connectionTimeout(Duration.ofSeconds(2))//
                 .responseTimeout(Duration.ofSeconds(5))//
                 .build();
     }

@@ -373,11 +373,9 @@ public class ServerService {
     }
 
     public Flux<ServerWithStatsDto> getServers() {
-        var containers = dockerClient.listContainersCmd()//
+        return Flux.fromIterable(dockerClient.listContainersCmd()//
                 .withLabelFilter(List.of(Config.serverLabelName))//
-                .exec();
-
-        return Flux.fromIterable(containers)//
+                .exec())//
                 .flatMap(container -> Mono.justOrEmpty(readMetadataFromContainer(container)))
                 .map(server -> server.getInit())//
                 .flatMap(server -> stats(server.getId())//
@@ -389,8 +387,8 @@ public class ServerService {
                             return Mono
                                     .just(modelMapper.map(server, ServerWithStatsDto.class)
                                             .setUsage(new StatsDto().setStatus("ERROR")));
-                        })//
-                );
+                        }))
+                .timeout(Duration.ofSeconds(2));
     }
 
     public Mono<ServerWithStatsDto> getServer(UUID id) {
@@ -1160,10 +1158,11 @@ public class ServerService {
     }
 
     public Flux<LiveStats> liveStats(UUID serverId) {
-        return Flux.concat(
-                stats(serverId).map(stats -> new LiveStats(0l, stats)),
-                Flux.interval(Duration.ofSeconds(1))
-                        .flatMap(index -> stats(serverId).map(stats -> new LiveStats(index + 1, stats))));
+        var init = stats(serverId).map(stats -> new LiveStats(0l, stats));
+        var interval = Flux.interval(Duration.ofSeconds(1))
+                .flatMap(index -> stats(serverId).map(stats -> new LiveStats(index + 1, stats)));
+
+        return Flux.concat(init, interval);
     }
 
     public Mono<StatsDto> stats(UUID serverId) {
