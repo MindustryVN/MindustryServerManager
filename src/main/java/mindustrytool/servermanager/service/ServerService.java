@@ -164,7 +164,7 @@ public class ServerService {
                 }
 
                 if (!statsAdapter.containsKey(metadata.getInit().getId())) {
-                    attachStats(metadata.getInit().getId());
+                    attachToStats(metadata.getInit().getId());
                 }
             }
         }
@@ -1307,7 +1307,7 @@ public class ServerService {
         }
     }
 
-    private void attachStats(UUID id) {
+    private synchronized void attachToStats(UUID id) {
         var container = findContainerByServerId(id);
 
         if (container == null) {
