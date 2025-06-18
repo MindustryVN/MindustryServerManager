@@ -1285,19 +1285,25 @@ public class ServerService {
                             error -> log.error("Error in log stream for server {}", id, error),
                             () -> log.info("Log stream for server {} completed", id));
 
-            streamSubscriptions.put(id, subscription);
+            var prev = streamSubscriptions.put(id, subscription);
+
+            if (prev != null) {
+                Log.warn("Override log for server: " + id);
+                if (!prev.isDisposed()) {
+                    prev.dispose();
+                }
+            }
+
             return newSink;
         });
 
-        synchronized (sink) {
-            var result = sink.tryEmitNext(message);
+        var result = sink.tryEmitNext(message);
 
-            if (result.isFailure()) {
-                if (result == EmitResult.FAIL_CANCELLED) {
-                    streamSubscriptions.remove(serverId);
-                }
-                System.out.println("[" + serverId + "] Log stream error: " + result);
+        if (result.isFailure()) {
+            if (result == EmitResult.FAIL_CANCELLED) {
+                streamSubscriptions.remove(serverId);
             }
+            Log.info("[" + serverId + "] Log stream error: " + result);
         }
     }
 
@@ -1309,7 +1315,7 @@ public class ServerService {
         }
 
         if (statsAdapter.containsKey(id)) {
-            System.out.println("[" + id + "] Duplicate stats adapter");
+            Log.info("[" + id + "] Duplicate stats adapter");
             return;
         }
 
@@ -1354,13 +1360,13 @@ public class ServerService {
 
                     @Override
                     public void onComplete() {
-                        System.out.println("[" + id + "] Stats stream ended.");
+                        Log.info("[" + id + "] Stats stream ended.");
                         statsAdapter.remove(id);
                     }
 
                     @Override
                     public void onError(Throwable throwable) {
-                        System.out.println("[" + id + "] Stats stream error: " + throwable.getMessage());
+                        Log.info("[" + id + "] Stats stream error: " + throwable.getMessage());
                         statsAdapter.remove(id);
                     }
                 });
@@ -1370,7 +1376,7 @@ public class ServerService {
 
     private synchronized void attachToLogs(String containerId, UUID serverId) {
         if (logsAdapter.containsKey(serverId)) {
-            System.out.println("[" + containerId + "] Duplicate logs adapter");
+            Log.info("[" + containerId + "] Duplicate logs adapter");
             return;
         }
 
@@ -1387,7 +1393,7 @@ public class ServerService {
 
             @Override
             public void onComplete() {
-                System.out.println("[" + serverId + "] Log stream ended.");
+                Log.info("[" + serverId + "] Log stream ended.");
                 removeConsoleStream(serverId);
             }
 
@@ -1411,7 +1417,7 @@ public class ServerService {
                 .withTail(0)
                 .exec(callback);
 
-        System.out.println("[" + serverId + "] Log stream attached.");
+        Log.info("[" + serverId + "] Log stream attached.");
     }
 
     public void removeConsoleStream(UUID serverId) {
