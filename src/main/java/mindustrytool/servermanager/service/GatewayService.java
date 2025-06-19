@@ -291,6 +291,16 @@ public class GatewayService {
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow version"));
             }
+    
+            public Mono<JsonNode> getWorkflow() {
+                return webClient.method(HttpMethod.GET)
+                        .uri("/workflow")
+                        .retrieve()//
+                        .bodyToMono(JsonNode.class)//
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow"));
+            }
 
             public Mono<JsonNode> loadWorkflow(JsonNode payload) {
                 return webClient.method(HttpMethod.POST)

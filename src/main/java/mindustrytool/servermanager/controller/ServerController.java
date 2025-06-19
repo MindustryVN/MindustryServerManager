@@ -276,6 +276,11 @@ public class ServerController {
     public Mono<Long> getWorkflowVersion(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getWorkflowVersion();
     }
+   
+    @GetMapping("servers/{id}/workflow")
+    public Mono<JsonNode> getWorkflow(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getWorkflow();
+    }
 
     @PostMapping("servers/{id}/workflow")
     public Mono<JsonNode> loadWorkflow(@PathVariable("id") UUID serverId, @Validated @RequestBody JsonNode payload) {
