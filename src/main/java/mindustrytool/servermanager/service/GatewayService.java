@@ -306,6 +306,7 @@ public class GatewayService {
             public Mono<JsonNode> loadWorkflow(JsonNode payload) {
                 return webClient.method(HttpMethod.POST)
                         .uri("/workflow")
+                        .bodyValue(payload)
                         .retrieve()//
                         .bodyToMono(JsonNode.class)//
                         .timeout(Duration.ofSeconds(10))
