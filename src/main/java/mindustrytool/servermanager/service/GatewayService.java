@@ -80,8 +80,9 @@ public class GatewayService {
         }
 
         private static Mono<Throwable> createError(ClientResponse response) {
-            return response.bodyToMono(String.class)
-                    .map(message -> new ApiError(HttpStatus.valueOf(response.statusCode().value()), message));
+            return response.bodyToMono(JsonNode.class)
+                    .map(message -> new ApiError(HttpStatus.valueOf(response.statusCode().value()),
+                            message.has("message") ? message.get("message").asText() : message.toString()));
         }
 
         public class Server {
@@ -271,7 +272,7 @@ public class GatewayService {
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get routes"));
             }
-        
+
             public Mono<JsonNode> getWorkflowNodes() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/nodes")
@@ -281,7 +282,7 @@ public class GatewayService {
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow nodes"));
             }
-       
+
             public Mono<Long> getWorkflowVersion() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/version")
@@ -291,7 +292,7 @@ public class GatewayService {
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow version"));
             }
-    
+
             public Mono<JsonNode> getWorkflow() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow")
