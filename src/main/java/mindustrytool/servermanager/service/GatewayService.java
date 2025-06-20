@@ -303,12 +303,12 @@ public class GatewayService {
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow"));
             }
 
-            public Mono<JsonNode> saveWorkflow(JsonNode payload) {
+            public Mono<Void> saveWorkflow(JsonNode payload) {
                 return webClient.method(HttpMethod.POST)
                         .uri("/workflow")
                         .bodyValue(payload)
                         .retrieve()//
-                        .bodyToMono(JsonNode.class)//
+                        .bodyToMono(Void.class)//
                         .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when save workflow"));
