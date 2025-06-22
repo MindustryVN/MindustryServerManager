@@ -1187,7 +1187,7 @@ public class ServerService {
         var interval = Flux.interval(Duration.ofSeconds(1))
                 .flatMap(index -> stats(serverId).map(stats -> new LiveStats(index + 1, stats)));
 
-        return Flux.concat(init, interval);
+        return Flux.merge(init, interval);
     }
 
     public Mono<StatsDto> stats(UUID serverId) {
