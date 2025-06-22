@@ -14,7 +14,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -269,7 +268,7 @@ public class ServerController {
     }
 
     @GetMapping(path = "/servers/{id}/workflow/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<ServerSentEvent<JsonNode>> getWorkflowEvents(@PathVariable("id") UUID serverId) {
+    public Flux<JsonNode> getWorkflowEvents(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getWorkflowEvents();
     }
 

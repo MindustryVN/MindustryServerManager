@@ -36,7 +36,6 @@ import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
-import mindustrytool.servermanager.utils.Utils;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -286,20 +285,15 @@ public class GatewayService {
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow nodes"));
             }
 
-            public Flux<ServerSentEvent<JsonNode>> getWorkflowEvents() {
+            public Flux<JsonNode> getWorkflowEvents() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/events")
                         .retrieve()//
-                        .bodyToFlux(String.class)
-                        .map(json -> {
-                            try {
-                                JsonNode node = Utils.readString(json);
-                                return ServerSentEvent.builder(node).build();
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                                return ServerSentEvent.builder((JsonNode) null).build();
-                            }
-                        }).timeout(Duration.ofSeconds(10))
+                        .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<JsonNode>>() {
+                        })
+                        .map(ServerSentEvent::data)
+                        .log()
+                        .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow events"));
             }
