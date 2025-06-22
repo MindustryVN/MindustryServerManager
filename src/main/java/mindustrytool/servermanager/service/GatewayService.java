@@ -286,16 +286,16 @@ public class GatewayService {
             }
 
             public Flux<JsonNode> getWorkflowEvents() {
-                return webClient.method(HttpMethod.GET)
+                return webClient.get()
                         .uri("/workflow/events")
-                        .retrieve()//
+                        .accept(MediaType.TEXT_EVENT_STREAM)
+                        .retrieve()
                         .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<JsonNode>>() {
                         })
                         .map(ServerSentEvent::data)
-                        .log()
                         .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
-                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow events"));
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when getting workflow events"));
             }
 
             public Mono<JsonNode> emitWorkflowNode(String nodeId) {
