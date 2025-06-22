@@ -267,8 +267,18 @@ public class ServerController {
         serverService.deleteManagerMod(filename);
     }
 
+    @GetMapping(path = "/servers/{id}/workflow/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<JsonNode> getWorkflowEvents(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getWorkflowEvents();
+    }
+
     @GetMapping("servers/{id}/workflow/nodes")
     public Mono<JsonNode> getWorkflowNodes(@PathVariable("id") UUID serverId) {
+        return gatewayService.of(serverId).getServer().getWorkflowNodes();
+    }
+
+    @PostMapping("servers/{id}/workflow/nodes/{nodeId}/emit")
+    public Mono<JsonNode> getWorkflowNodes(@PathVariable("id") UUID serverId, @PathVariable("nodeId") String nodeId) {
         return gatewayService.of(serverId).getServer().getWorkflowNodes();
     }
 
@@ -276,7 +286,7 @@ public class ServerController {
     public Mono<Long> getWorkflowVersion(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getWorkflowVersion();
     }
-   
+
     @GetMapping("servers/{id}/workflow")
     public Mono<JsonNode> getWorkflow(@PathVariable("id") UUID serverId) {
         return gatewayService.of(serverId).getServer().getWorkflow();
@@ -286,7 +296,7 @@ public class ServerController {
     public Mono<Void> saveWorkflow(@PathVariable("id") UUID serverId, @Validated @RequestBody JsonNode payload) {
         return gatewayService.of(serverId).getServer().saveWorkflow(payload);
     }
-  
+
     @PostMapping("servers/{id}/workflow/load")
     public Mono<JsonNode> loadWorkflow(@PathVariable("id") UUID serverId, @Validated @RequestBody JsonNode payload) {
         return gatewayService.of(serverId).getServer().loadWorkflow(payload);

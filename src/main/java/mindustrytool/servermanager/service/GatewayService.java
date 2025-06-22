@@ -273,6 +273,8 @@ public class GatewayService {
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get routes"));
             }
 
+
+
             public Mono<JsonNode> getWorkflowNodes() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/nodes")
@@ -281,6 +283,25 @@ public class GatewayService {
                         .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow nodes"));
+            }
+            public Flux<JsonNode> getWorkflowEvents() {
+                return webClient.method(HttpMethod.GET)
+                        .uri("/workflow/events")
+                        .retrieve()//
+                        .bodyToFlux(JsonNode.class)//
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow events"));
+            }
+
+            public Mono<JsonNode> emitWorkflowNode(String nodeId) {
+                return webClient.method(HttpMethod.GET)
+                        .uri("/workflow/nodes" + nodeId + "/emit")
+                        .retrieve()//
+                        .bodyToMono(JsonNode.class)//
+                        .timeout(Duration.ofSeconds(10))
+                        .onErrorMap(TimeoutException.class,
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when emit workflow node"));
             }
 
             public Mono<Long> getWorkflowVersion() {
