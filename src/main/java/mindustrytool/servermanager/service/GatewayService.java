@@ -289,6 +289,7 @@ public class GatewayService {
             public Flux<ServerSentEvent<JsonNode>> getWorkflowEvents() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/events")
+                        .accept(MediaType.TEXT_EVENT_STREAM)
                         .retrieve()//
                         .bodyToFlux(String.class)
                         .map(json -> {
