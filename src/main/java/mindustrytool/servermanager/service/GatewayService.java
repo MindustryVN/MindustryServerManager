@@ -13,9 +13,11 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import com.fasterxml.jackson.databind.JsonNode;
 
 import lombok.Getter;
@@ -34,6 +36,7 @@ import mindustrytool.servermanager.types.response.ServerCommandDto;
 import mindustrytool.servermanager.types.response.ServerDto;
 import mindustrytool.servermanager.types.response.StatsDto;
 import mindustrytool.servermanager.utils.ApiError;
+import mindustrytool.servermanager.utils.Utils;
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -273,8 +276,6 @@ public class GatewayService {
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get routes"));
             }
 
-
-
             public Mono<JsonNode> getWorkflowNodes() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/nodes")
@@ -284,12 +285,20 @@ public class GatewayService {
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow nodes"));
             }
-            public Flux<JsonNode> getWorkflowEvents() {
+
+            public Flux<ServerSentEvent<JsonNode>> getWorkflowEvents() {
                 return webClient.method(HttpMethod.GET)
                         .uri("/workflow/events")
                         .retrieve()//
-                        .bodyToFlux(JsonNode.class)//
-                        .timeout(Duration.ofSeconds(10))
+                        .bodyToFlux(String.class)
+                        .map(json -> {
+                            try {
+                                JsonNode node = Utils.readString(json);
+                                return ServerSentEvent.builder(node).build();
+                            } catch (Exception e) {
+                                return ServerSentEvent.builder((JsonNode) null).build();
+                            }
+                        }).timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow events"));
             }
