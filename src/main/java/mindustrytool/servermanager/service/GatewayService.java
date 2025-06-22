@@ -292,7 +292,8 @@ public class GatewayService {
                         .bodyToFlux(JsonNode.class)
                         .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
-                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when getting workflow events"));
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when getting workflow events"))
+                        .log();
             }
 
             public Mono<JsonNode> emitWorkflowNode(String nodeId) {
