@@ -296,6 +296,7 @@ public class ServerService {
                     }
                     return Mono.empty();
                 })//
+                .subscribeOn(Schedulers.boundedElastic())
                 .blockLast();
     }
 
