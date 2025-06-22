@@ -297,6 +297,7 @@ public class GatewayService {
                                 JsonNode node = Utils.readString(json);
                                 return ServerSentEvent.builder(node).build();
                             } catch (Exception e) {
+                                e.printStackTrace();
                                 return ServerSentEvent.builder((JsonNode) null).build();
                             }
                         }).timeout(Duration.ofSeconds(10))
