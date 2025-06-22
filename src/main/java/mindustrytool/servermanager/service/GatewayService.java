@@ -13,7 +13,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
-import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -290,9 +289,7 @@ public class GatewayService {
                         .uri("/workflow/events")
                         .accept(MediaType.TEXT_EVENT_STREAM)
                         .retrieve()
-                        .bodyToFlux(new ParameterizedTypeReference<ServerSentEvent<JsonNode>>() {
-                        })
-                        .map(ServerSentEvent::data)
+                        .bodyToFlux(JsonNode.class)
                         .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when getting workflow events"));
