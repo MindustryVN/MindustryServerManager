@@ -290,9 +290,8 @@ public class GatewayService {
                         .accept(MediaType.TEXT_EVENT_STREAM)
                         .retrieve()
                         .bodyToFlux(JsonNode.class)
-                        .timeout(Duration.ofSeconds(10))
                         .onErrorMap(TimeoutException.class,
-                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when getting workflow events"))
+                                error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get workflow events"))
                         .log();
             }
 
