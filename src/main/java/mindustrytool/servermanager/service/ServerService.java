@@ -954,11 +954,23 @@ public class ServerService {
                                 .setRepo(meta.repo)
                                 .setSubtitle(meta.subtitle)
                                 .setVersion(meta.version)));
-            } catch (ApiError error) {
-                sendConsole(serverId,
-                        "File doesn't have a '[mod/plugin].[h]json' file, delete and skipping: " + modFile.name());
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Exception error) {
+                error.printStackTrace();
+
+                result.add(new ModDto()//
+                        .setFilename(modFile.name())//
+                        .setName("Error")
+                        .setMeta(new ModMetaDto()//
+                                .setAuthor("Error")
+                                .setName("Error")
+                                .setDisplayName("Error")));
+
+                if (error instanceof ApiError) {
+                    sendConsole(serverId,
+                            "File doesn't have a '[mod/plugin].[h]json' file, delete and skipping: " + modFile.name());
+                } else {
+                    sendConsole(serverId, "Error while loading mod: " + modFile.name());
+                }
             }
         }
 
