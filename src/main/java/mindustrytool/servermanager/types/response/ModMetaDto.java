@@ -8,11 +8,12 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class ModMetaDto {
-    private String name;
-    private String internalName;
+    private String name = "Unknown";
+    private String internalName = "Unknown";
     private String minGameVersion = "0";
-    private String displayName, author, description, subtitle, version, main, repo;
+    private String displayName = "Unknown", author = "Unknown", description = "Unknown", subtitle = "Unknown",
+            version = "Unknown", main = "Unknown", repo = "Unknown";
     private List<String> dependencies = List.of();
-    private boolean hidden;
-    private boolean java;
+    private boolean hidden = false;
+    private boolean java = false;
 }
