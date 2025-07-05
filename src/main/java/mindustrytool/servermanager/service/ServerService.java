@@ -1466,14 +1466,14 @@ public class ServerService {
             }
         };
 
-        logsAdapter.put(serverId, callback);
-
         dockerClient.logContainerCmd(containerId)
                 .withStdOut(true)
                 .withStdErr(true)
                 .withFollowStream(true)
                 .withTail(0)
                 .exec(callback);
+
+        logsAdapter.put(serverId, callback);
 
         Log.info("[" + serverId + "] Log stream attached.");
     }
