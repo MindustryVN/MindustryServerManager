@@ -1453,6 +1453,23 @@ public class ServerService {
             public void onComplete() {
                 Log.info("[" + serverId + "] Log stream ended.");
                 removeConsoleStream(serverId);
+
+                int completedAt = (int) (System.currentTimeMillis() / 1000l);
+
+                dockerClient.logContainerCmd(containerId)
+                        .withStdOut(true)
+                        .withStdErr(true)
+                        .withSince(completedAt)
+                        .exec(new ResultCallback.Adapter<>() {
+                            @Override
+                            public void onNext(Frame frame) {
+                                var message = new String(frame.getPayload());
+                                if (message.isBlank()) {
+                                    return;
+                                }
+                                sendConsole(serverId,"[red]Log after stop: " + message);
+                            }
+                        });
             }
 
             @Override
