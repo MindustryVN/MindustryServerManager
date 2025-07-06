@@ -3,7 +3,7 @@ COPY --chown=gradle:gradle . /home/gradle/src
 
 WORKDIR /home/gradle/src
 
-RUN gradle build --no-daemon 
+RUN gradle clean bootJar --no-daemon 
 
 FROM eclipse-temurin:22-jre-alpine
 
