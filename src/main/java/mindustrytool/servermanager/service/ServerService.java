@@ -1032,22 +1032,28 @@ public class ServerService {
                 .filter(file -> file.length() < MAX_FILE_SIZE)//
                 .switchIfEmpty(ApiError.badRequest("file-too-big"))//
                 .flatMapMany(file -> {
-                    try {
-                        return file.isDirectory()//
-                                ? Flux.fromArray(file.listFiles())//
-                                        .map(child -> new ServerFileDto()//
-                                                .name(child.getName())//
-                                                .size(child.length())//
-                                                .directory(child.isDirectory()))
-                                : Flux.just(new ServerFileDto()//
-                                        .name(file.getName())//
-                                        .directory(file.isDirectory())//
-                                        .size(file.length())//
-                                        .data(Files.readString(file.toPath())));
-                    } catch (IOException e) {
-                        return Mono.error(e);
-                    }
+                    return file.isDirectory()//
+                            ? Flux.fromArray(file.listFiles())//
+                                    .map(child -> new ServerFileDto()//
+                                            .name(child.getName())//
+                                            .size(child.length())//
+                                            .directory(child.isDirectory()))
+                            : Flux.just(new ServerFileDto()//
+                                    .name(file.getName())//
+                                    .directory(file.isDirectory())//
+                                    .size(file.length())//
+                                    .data(readFile(file)));
+
                 });
+    }
+
+    private String readFile(File file) {
+        try {
+            return Files.readString(file.toPath());
+        } catch (Throwable e) {
+            return "";
+        }
+
     }
 
     public boolean fileExists(UUID serverId, String path) {
@@ -1467,7 +1473,7 @@ public class ServerService {
                                 if (message.isBlank()) {
                                     return;
                                 }
-                                sendConsole(serverId,"[red]Log after stop: " + message);
+                                sendConsole(serverId, "[red]Log after stop: " + message);
                             }
                         });
             }
