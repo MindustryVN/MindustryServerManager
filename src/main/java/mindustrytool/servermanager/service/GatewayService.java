@@ -223,7 +223,7 @@ public class GatewayService {
                         .retrieve()//
                         .bodyToMono(Boolean.class)//
                         .timeout(Duration.ofMillis(100))//
-                        .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(100)))
+                        .retryWhen(Retry.fixedDelay(50, Duration.ofMillis(300)))
                         .onErrorMap(error -> Exceptions.isRetryExhausted(error),
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Fail to check for hosting"));
             }
