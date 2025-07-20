@@ -37,7 +37,7 @@ public class SSE {
     }
 
     public static Flux<String> create(Function<Consumer<String>, Flux<String>> func) {
-        Many<String> sink = Sinks.many().multicast().onBackpressureBuffer();
+        Many<String> sink = Sinks.many().unicast().onBackpressureBuffer();
 
         return Flux.merge(
                 sink.asFlux(),
