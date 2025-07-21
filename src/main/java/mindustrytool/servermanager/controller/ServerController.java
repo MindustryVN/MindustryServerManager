@@ -5,7 +5,6 @@ import java.io.FileNotFoundException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -240,11 +239,11 @@ public class ServerController {
     }
 
     @PostMapping("servers/{id}/mismatch")
-    public Mono<List<String>> getMismatch(//
+    public Flux<String> getMismatch(//
             @PathVariable("id") UUID serverId,
             @Validated @RequestBody InitServerRequest init//
     ) {
-        return serverService.getMismatch(serverId, init);
+        return serverService.getMismatch(serverId, init).flatMapMany(item -> Flux.fromIterable(item));
     }
 
     @GetMapping("mods")
