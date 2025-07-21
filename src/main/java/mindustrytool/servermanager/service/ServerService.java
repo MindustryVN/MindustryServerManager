@@ -471,6 +471,27 @@ public class ServerService {
 
             String containerId = null;
 
+            var servers = dockerClient.listContainersCmd()
+                    .withShowAll(true)
+                    .withLabelFilter(List.of(Config.serverLabelName))
+                    .exec();
+
+            for (var server : servers) {
+                var optional = readMetadataFromContainer(server);
+
+                if (optional.isEmpty()) {
+                    continue;
+                }
+
+                var metadata = optional.get();
+
+                if (metadata.getInit().getPort() == request.getInit().getPort() && !metadata.getInit().getId().equals(request.getInit().getId())) {
+                    callback.accept("Delete container " + server.getNames()[0] + " port: " + metadata.getInit().getPort());
+                    dockerClient.removeContainerCmd(server.getId()).exec();
+                    continue;
+                }
+            }
+
             var containers = dockerClient.listContainersCmd()//
                     .withShowAll(true)//
                     .withLabelFilter(Map.of(Config.serverIdLabel, request.getInit().getId().toString()))//
