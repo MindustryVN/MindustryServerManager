@@ -484,9 +484,17 @@ public class ServerService {
                 }
 
                 var metadata = optional.get();
+                var isSamePort = metadata.getInit().getPort() == request.getInit().getPort();
+                var isSameId = metadata.getInit().getId().equals(request.getInit().getId());
 
-                if (metadata.getInit().getPort() == request.getInit().getPort() && !metadata.getInit().getId().equals(request.getInit().getId())) {
-                    callback.accept("Delete container " + server.getNames()[0] + " port: " + metadata.getInit().getPort());
+                if (isSamePort && !isSameId) {
+                    callback.accept(
+                            "Delete container " + server.getNames()[0] + " port: " + metadata.getInit().getPort());
+
+                    if (server.getState().equalsIgnoreCase("running")) {
+                        dockerClient.stopContainerCmd(server.getId()).exec();
+                    }
+
                     dockerClient.removeContainerCmd(server.getId()).exec();
                     continue;
                 }
