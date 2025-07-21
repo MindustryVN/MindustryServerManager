@@ -908,7 +908,7 @@ public class ServerService {
                 .map(file -> {
                     try {
                         return MapIO.createMap(file, true);
-                    } catch (IOException e) {
+                    } catch (Throwable e) {
                         e.printStackTrace();
                         return new mindustry.maps.Map(file, 0, 0, new StringMap(), true, 0, Version.build);
                     }
