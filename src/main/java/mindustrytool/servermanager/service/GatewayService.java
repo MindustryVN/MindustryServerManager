@@ -168,7 +168,7 @@ public class GatewayService {
                         .uri("stats")
                         .retrieve()//
                         .bodyToMono(StatsDto.class)//
-                        .timeout(Duration.ofMillis(500))
+                        .timeout(Duration.ofMillis(1000))
                         .onErrorMap(TimeoutException.class,
                                 error -> new ApiError(HttpStatus.BAD_REQUEST, "Timeout when get stats"));
             }
