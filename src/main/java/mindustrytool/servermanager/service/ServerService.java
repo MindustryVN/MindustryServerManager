@@ -328,10 +328,6 @@ public class ServerService {
         }
         log.info("Found " + containers.size() + " containers with id " + serverId + " delete duplicates");
 
-        for (int i = 1; i < containers.size(); i++) {
-            dockerClient.removeContainerCmd(containers.get(i).getId()).exec();
-        }
-
         return containers.get(0);
     }
 
@@ -351,22 +347,20 @@ public class ServerService {
     }
 
     public Mono<Void> remove(UUID serverId) {
-        lock(serverId, () -> {
-            var container = findContainerByServerId(serverId);
+        var container = findContainerByServerId(serverId);
 
-            if (container == null) {
-                log.info("Container not found: " + serverId);
-                return;
-            }
+        if (container == null) {
+            log.info("Container not found: " + serverId);
+            return Mono.empty();
+        }
 
-            if (container.getState().equalsIgnoreCase("running")) {
-                dockerClient.stopContainerCmd(container.getId()).exec();
-                log.info("Stopped: " + container.getNames()[0]);
-            }
+        if (container.getState().equalsIgnoreCase("running")) {
+            dockerClient.stopContainerCmd(container.getId()).exec();
+            log.info("Stopped: " + container.getNames()[0]);
+        }
 
-            dockerClient.removeContainerCmd(container.getId()).exec();
-            log.info("Removed: " + container.getNames()[0]);
-        });
+        dockerClient.removeContainerCmd(container.getId()).exec();
+        log.info("Removed: " + container.getNames()[0]);
 
         return Mono.empty();
     }
