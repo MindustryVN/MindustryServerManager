@@ -603,6 +603,7 @@ public class ServerService {
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
         env.add("SERVER_ID=" + serverId);
+        env.add("JAVA_OPTS="+ "-XmX" + request.getInit().getPlan().getRam() + "m");
 
         if (Config.IS_DEVELOPMENT) {
             env.add("ENV=DEV");
