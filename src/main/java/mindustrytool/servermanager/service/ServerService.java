@@ -133,14 +133,6 @@ public class ServerService {
         }
     }
 
-    private void lock(UUID id, Runnable fn) {
-        Object lock = serverLocks.computeIfAbsent(id, _ignore -> new Object());
-
-        synchronized (lock) {
-            fn.run();
-        }
-    }
-
     @PostConstruct
     private void init() {
         dockerClient.eventsCmd()
@@ -162,6 +154,18 @@ public class ServerService {
 
                         readMetadataFromContainer(container)
                                 .ifPresent(metadata -> attachToLogs(containerId, metadata.getInit().getId()));
+                    }
+                });
+
+        List<String> ignoredEvents = List.of("exec_create", "exec_start", "exec_die", "exec_detach");
+
+        dockerClient.eventsCmd()
+                .exec(new ResultCallback.Adapter<>() {
+                    @Override
+                    public void onNext(Event event) {
+                        if (ignoredEvents.contains(event.getAction())) {
+                            Log.info(event.toString());
+                        }
                     }
                 });
     }
@@ -603,7 +607,7 @@ public class ServerService {
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
         env.add("SERVER_ID=" + serverId);
-        env.add("JAVA_OPTS="+ "-Xmx" + request.getInit().getPlan().getRam() + "m");
+        env.add("JAVA_OPTS=" + "-Xmx" + request.getInit().getPlan().getRam() + "m");
 
         if (Config.IS_DEVELOPMENT) {
             env.add("ENV=DEV");

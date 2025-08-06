@@ -31,8 +31,13 @@ public class RequestFilter implements WebFilter {
                     var status = exchange.getResponse().getStatusCode();
                     var method = request.getMethod();
                     var duration = Duration.between(start, Instant.now()).toMillis();
-                    
-                    log.info("[%dms] [%s] %s %s".formatted( duration,  status == null ? "Unknown" : status.value(), method.toString().toUpperCase(), requestUrl));
+
+                    if (duration < 200) {
+                        return;
+                    }
+
+                    log.info("[%dms] [%s] %s %s".formatted(duration, status == null ? "Unknown" : status.value(),
+                            method.toString().toUpperCase(), requestUrl));
                 });
     }
 
