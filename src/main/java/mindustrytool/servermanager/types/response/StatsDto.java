@@ -22,4 +22,5 @@ public class StatsDto {
     private boolean isHosting = false;
     private String status = "MANAGER_STATS_UNSET";
     private String version = "UNSET";
+    private Long startedAt;
 }
