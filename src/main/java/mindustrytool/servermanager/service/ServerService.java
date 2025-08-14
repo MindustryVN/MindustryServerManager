@@ -1339,10 +1339,10 @@ public class ServerService {
 
     public void sendConsole(UUID serverId, String message) {
         Sinks.Many<String> sink = consoleStreams.computeIfAbsent(serverId, id -> {
-            Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer(10000);
+            Sinks.Many<String> newSink = Sinks.many().multicast().onBackpressureBuffer(1000);
 
             Disposable subscription = newSink.asFlux()
-                    .bufferTimeout(10000, Duration.ofMillis(500))
+                    .bufferTimeout(100, Duration.ofMillis(500))
                     .flatMap(batch -> {
 
                         String last = null;
