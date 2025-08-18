@@ -638,7 +638,7 @@ public class ServerService {
                         .withCpuQuota((long) ((request.getInit().getPlan().getCpu() * 100000)))
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
-                                : RestartPolicy.onFailureRestart(5))
+                                : RestartPolicy.unlessStoppedRestart())
                         .withAutoRemove(request.getInit().isAutoTurnOff())
                         .withLogConfig(new LogConfig(LogConfig.LoggingType.JSON_FILE, Map.of(
                                 "max-size", "100m",
