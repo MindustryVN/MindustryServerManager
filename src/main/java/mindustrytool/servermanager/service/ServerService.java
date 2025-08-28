@@ -92,6 +92,7 @@ import reactor.util.retry.Retry;
 @Service
 @RequiredArgsConstructor
 public class ServerService {
+    private final List<String> ignoredEvents = List.of("exec_create", "exec_start", "exec_die", "exec_detach");
 
     private final DockerClient dockerClient;
     private final EnvConfig envConfig;
@@ -157,15 +158,18 @@ public class ServerService {
                     }
                 });
 
-        List<String> ignoredEvents = List.of("exec_create", "exec_start", "exec_die", "exec_detach");
-
         dockerClient.eventsCmd()
                 .exec(new ResultCallback.Adapter<>() {
                     @Override
                     public void onNext(Event event) {
-                        if (event.getStatus() != null && !ignoredEvents.contains(event.getStatus())) {
-                            Log.info(event.toString());
+                        if (event.getStatus() != null) {
+                            for (var ignored : ignoredEvents) {
+                                if (ignored.equals(event.getStatus())) {
+                                    return;
+                                }
+                            }
                         }
+                        Log.info(event.toString());
                     }
                 });
     }
