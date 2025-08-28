@@ -162,9 +162,9 @@ public class ServerService {
                 .exec(new ResultCallback.Adapter<>() {
                     @Override
                     public void onNext(Event event) {
-                        if (event.getStatus() != null) {
+                        if (event.getAction() != null) {
                             for (var ignored : ignoredEvents) {
-                                if (ignored.equals(event.getStatus())) {
+                                if (ignored.equals(event.getAction())) {
                                     return;
                                 }
                             }
