@@ -163,7 +163,7 @@ public class ServerService {
                 .exec(new ResultCallback.Adapter<>() {
                     @Override
                     public void onNext(Event event) {
-                        if (ignoredEvents.contains(event.getAction())) {
+                        if (ignoredEvents.contains(event.getStatus())) {
                             Log.info(event.toString());
                         }
                     }
