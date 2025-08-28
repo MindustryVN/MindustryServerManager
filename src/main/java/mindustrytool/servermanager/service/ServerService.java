@@ -164,7 +164,7 @@ public class ServerService {
                     public void onNext(Event event) {
                         if (event.getAction() != null) {
                             for (var ignored : ignoredEvents) {
-                                if (ignored.equals(event.getAction())) {
+                                if (ignored.equalsIgnoreCase(event.getAction())) {
                                     return;
                                 }
                             }
