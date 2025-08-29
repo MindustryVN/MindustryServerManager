@@ -610,10 +610,18 @@ public class ServerService {
         exposedPorts.add(tcp);
         exposedPorts.add(udp);
 
+        List<String> args = List.of(
+                "-XX:MetaspaceSize=128m",
+                "-XX:MaxMetaspaceSize=128m",
+                "-XX:+UseContainerSupport",
+                "-XX:MaxRAMPercentage=85.0",
+                "-XX:+CrashOnOutOfMemoryError",
+                "-Xmx" + request.getInit().getPlan().getRam() + "m");
+                
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
         env.add("SERVER_ID=" + serverId);
-        env.add("JAVA_OPTS=" + "-Xmx" + request.getInit().getPlan().getRam() + "m");
+        env.add("JAVA_TOOL_OPTIONS=" + String.join(" ", args));
 
         if (Config.IS_DEVELOPMENT) {
             env.add("ENV=DEV");
