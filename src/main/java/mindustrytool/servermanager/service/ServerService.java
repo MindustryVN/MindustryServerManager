@@ -14,6 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
@@ -92,7 +93,7 @@ import reactor.util.retry.Retry;
 @Service
 @RequiredArgsConstructor
 public class ServerService {
-    private final List<String> ignoredEvents = List.of("exec_create", "exec_start", "exec_die", "exec_detach");
+    private final Set<String> ignoredEvents = Set.of("exec_create", "exec_start", "exec_die", "exec_detach");
 
     private final DockerClient dockerClient;
     private final EnvConfig envConfig;
@@ -163,10 +164,11 @@ public class ServerService {
                     @Override
                     public void onNext(Event event) {
                         if (event.getAction() != null) {
-                            for (var ignored : ignoredEvents) {
-                                if (ignored.equalsIgnoreCase(event.getAction())) {
-                                    return;
-                                }
+                            String status = event.getStatus();
+
+                            if (status != null && ignoredEvents.stream()
+                                    .anyMatch(ignored -> status.toLowerCase().startsWith(ignored))) {
+                                return;
                             }
                         }
                         Log.info(event.toString());
