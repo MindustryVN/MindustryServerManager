@@ -26,6 +26,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.codec.multipart.FilePart;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -100,6 +102,7 @@ public class ServerService {
     private final ModelMapper modelMapper;
     private final GatewayService gatewayService;
     private final DockerService dockerService;
+    private final WebClient webClient;
 
     private enum ServerFlag {
         KILL,
@@ -160,6 +163,7 @@ public class ServerService {
                 });
 
         dockerClient.eventsCmd()
+                .withLabelFilter(Config.serverLabelName)
                 .exec(new ResultCallback.Adapter<>() {
                     @Override
                     public void onNext(Event event) {
@@ -171,9 +175,23 @@ public class ServerService {
                                 return;
                             }
                         }
+
                         Log.info(event.toString());
+
+                        webClient.post()
+                                .uri("https://discord.com/api/webhooks/1412106054308728953/oDrnWfbyPMtg-Co6UPYcXcS_AEtHcSFTuZ-gSKOdQaSLdVDkRG3SEhODUdH4NVXuanmL")
+                                .bodyValue(new WebhookMessage(event.toString()))
+                                .retrieve()
+                                .bodyToMono(Void.class)
+                                .onErrorResume(WebClientResponseException.class, ex -> {
+                                    ex.printStackTrace();
+                                    return Mono.empty();
+                                }).subscribe();
                     }
                 });
+    }
+
+    private record WebhookMessage(String content) {
     }
 
     @PostConstruct
@@ -616,8 +634,8 @@ public class ServerService {
                 "-XX:+UseContainerSupport",
                 "-XX:MaxRAMPercentage=85.0",
                 "-XX:+CrashOnOutOfMemoryError",
-                "-Xmx" + (int)(request.getInit().getPlan().getRam() * 0.8) + "m");
-                
+                "-Xmx" + (int) (request.getInit().getPlan().getRam() * 0.8) + "m");
+
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
         env.add("SERVER_ID=" + serverId);
