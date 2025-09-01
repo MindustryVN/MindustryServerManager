@@ -364,7 +364,7 @@ public class ServerService {
             return Mono.empty();
         }
 
-        if (container.getState().equalsIgnoreCase("running")) {
+        if (!container.getState().equalsIgnoreCase("stopped")) {
             dockerClient.stopContainerCmd(container.getId()).exec();
             log.info("Stopped: " + container.getNames()[0]);
         }
