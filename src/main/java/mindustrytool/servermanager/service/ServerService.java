@@ -179,7 +179,7 @@ public class ServerService {
                         Log.info(event.toString());
 
                         webClient.post()
-                                .uri("https://discord.com/api/webhooks/1412106054308728953/oDrnWfbyPMtg-Co6UPYcXcS_AEtHcSFTuZ-gSKOdQaSLdVDkRG3SEhODUdH4NVXuanmL")
+                                .uri(Config.discordWebhook)
                                 .bodyValue(new WebhookMessage(event.toString()))
                                 .retrieve()
                                 .bodyToMono(Void.class)
