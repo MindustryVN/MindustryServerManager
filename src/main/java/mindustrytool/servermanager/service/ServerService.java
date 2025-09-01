@@ -616,7 +616,7 @@ public class ServerService {
                 "-XX:+UseContainerSupport",
                 "-XX:MaxRAMPercentage=85.0",
                 "-XX:+CrashOnOutOfMemoryError",
-                "-Xmx" + request.getInit().getPlan().getRam() + "m");
+                "-Xmx" + Math.floor(request.getInit().getPlan().getRam() * 0.8) + "m");
                 
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
