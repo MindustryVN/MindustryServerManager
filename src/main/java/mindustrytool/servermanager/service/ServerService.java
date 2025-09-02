@@ -176,7 +176,16 @@ public class ServerService {
                             }
                         }
 
-                        Log.info(event.toString());
+                        try {
+
+                            var metadata = Utils.readJsonAsClass(event.getRawValues().get("attributes").toString(),
+                                    ServerContainerMetadata.class);
+
+                            Log.info("@ @", event.getStatus().toUpperCase(), metadata.getInit().getName());
+
+                        } catch (Exception e) {
+                            Log.info(event.toString());
+                        }
 
                         webClient.post()
                                 .uri(Config.discordWebhook)
