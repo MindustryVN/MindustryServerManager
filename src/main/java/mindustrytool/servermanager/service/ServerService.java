@@ -178,7 +178,8 @@ public class ServerService {
 
                         try {
 
-                            var metadata = Utils.readJsonAsClass(event.getRawValues().get("attributes").toString(),
+                            var metadata = Utils.readJsonAsClass(
+                                    event.getActor().getAttributes().get(Config.serverLabelName).toString(),
                                     ServerContainerMetadata.class);
 
                             Log.info("@ @", event.getStatus().toUpperCase(), metadata.getInit().getName());
