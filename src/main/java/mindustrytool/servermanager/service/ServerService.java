@@ -183,19 +183,22 @@ public class ServerService {
 
                             Log.info("@ @", event.getStatus().toUpperCase(), metadata.getInit().getName());
 
+                            webClient.post()
+                                    .uri(Config.discordWebhook)
+                                    .bodyValue(new WebhookMessage(
+                                            "Server %s %s".formatted(metadata.getInit().getName(), event.getStatus())))
+                                    .retrieve()
+                                    .bodyToMono(Void.class)
+                                    .onErrorResume(WebClientResponseException.class, ex -> {
+                                        ex.printStackTrace();
+                                        return Mono.empty();
+                                    }).subscribe();
+
                         } catch (Exception e) {
+                            e.printStackTrace();
                             Log.info(event.toString());
                         }
 
-                        webClient.post()
-                                .uri(Config.discordWebhook)
-                                .bodyValue(new WebhookMessage(event.toString()))
-                                .retrieve()
-                                .bodyToMono(Void.class)
-                                .onErrorResume(WebClientResponseException.class, ex -> {
-                                    ex.printStackTrace();
-                                    return Mono.empty();
-                                }).subscribe();
                     }
                 });
     }
