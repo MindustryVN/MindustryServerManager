@@ -638,8 +638,8 @@ public class ServerService {
         exposedPorts.add(udp);
 
         List<String> args = List.of(
-                "-XX:MetaspaceSize=128m",
-                "-XX:MaxMetaspaceSize=128m",
+                "-XX:MetaspaceSize=256m",
+                "-XX:MaxMetaspaceSize=256m",
                 "-XX:+UseContainerSupport",
                 "-XX:MaxRAMPercentage=85.0",
                 "-XX:+CrashOnOutOfMemoryError",
