@@ -642,12 +642,12 @@ public class ServerService {
         exposedPorts.add(udp);
 
         List<String> args = List.of(
-                "-XX:MetaspaceSize=256m",
-                "-XX:MaxMetaspaceSize=256m",
+                "-XX:MetaspaceSize=192m",
+                "-XX:MaxMetaspaceSize=192m",
                 "-XX:+UseContainerSupport",
                 "-XX:MaxRAMPercentage=85.0",
                 "-XX:+CrashOnOutOfMemoryError",
-                "-Xmx" + (int) (request.getInit().getPlan().getRam() * 0.8) + "m");
+                "-Xmx" + (int) (request.getInit().getPlan().getRam() - 192) + "m");
 
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
