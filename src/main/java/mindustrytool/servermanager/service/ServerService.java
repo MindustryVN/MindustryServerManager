@@ -648,6 +648,8 @@ public class ServerService {
                 "-XX:InitialRAMPercentage=70.0",
                 "-XX:MaxRAMPercentage=70.0",
                 "-XX:+CrashOnOutOfMemoryError",
+                "-XX:NativeMemoryTracking=detail",
+                "-XX:+UnlockDiagnosticVMOptions",
                 "-Xmx" + (int) (request.getInit().getPlan().getRam() - 192) + "m");
 
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
