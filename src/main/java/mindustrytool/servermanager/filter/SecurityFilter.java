@@ -86,7 +86,6 @@ public class SecurityFilter implements WebFilter {
         String token = accessToken.replace("Bearer ", "");
 
         try {
-
             var data = getDataFromToken(token, securityKey);
 
             return chain.filter(exchange).contextWrite(withRequest(Mono.just(data)));
