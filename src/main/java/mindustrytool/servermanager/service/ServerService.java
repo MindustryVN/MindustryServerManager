@@ -686,6 +686,7 @@ public class ServerService {
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.unlessStoppedRestart())
                         .withAutoRemove(request.getInit().isAutoTurnOff())
+                        .withMemorySwap(request.getInit().getPlan().getRam() * 1024 * 1024l)
                         .withLogConfig(new LogConfig(LogConfig.LoggingType.JSON_FILE, Map.of(
                                 "max-size", "100m",
                                 "max-file", "5"//
