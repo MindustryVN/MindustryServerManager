@@ -645,7 +645,8 @@ public class ServerService {
                 "-XX:MetaspaceSize=192m",
                 "-XX:MaxMetaspaceSize=192m",
                 "-XX:+UseContainerSupport",
-                "-XX:MaxRAMPercentage=85.0",
+                "-XX:InitialRAMPercentage=70.0",
+                "-XX:MaxRAMPercentage=70.0",
                 "-XX:+CrashOnOutOfMemoryError",
                 "-Xmx" + (int) (request.getInit().getPlan().getRam() - 192) + "m");
 
