@@ -85,15 +85,16 @@ public class SecurityFilter implements WebFilter {
 
         String token = accessToken.replace("Bearer ", "");
 
-        var isTokenValid = validateToken(token, securityKey);
+        try {
 
-        if (!isTokenValid) {
+            var data = getDataFromToken(token, securityKey);
+
+            return chain.filter(exchange).contextWrite(withRequest(Mono.just(data)));
+        } catch (Exception e) {
+            e.printStackTrace();
+            log.error("Invalid token: " + token + " security key: " + securityKey, e);
             return ApiError.forbidden("Invalid token");
         }
-
-        var data = getDataFromToken(token, securityKey);
-
-        return chain.filter(exchange).contextWrite(withRequest(Mono.just(data)));
     }
 
     public ServerManagerJwt getDataFromToken(String token, String secret) {
@@ -107,19 +108,6 @@ public class SecurityFilter implements WebFilter {
             return objectMapper.readValue(data, ServerManagerJwt.class);
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(e);
-        }
-    }
-
-    public boolean validateToken(String token, String secret) {
-        try {
-            JWT.require(Algorithm.HMAC256(secret))//
-                    .withIssuer(ISSUER)//
-                    .build()//
-                    .verify(token);
-            return true;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return false;
         }
     }
 
