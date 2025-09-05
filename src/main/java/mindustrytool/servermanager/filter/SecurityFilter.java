@@ -118,6 +118,7 @@ public class SecurityFilter implements WebFilter {
                     .verify(token);
             return true;
         } catch (Exception e) {
+            e.printStackTrace();
             return false;
         }
     }
