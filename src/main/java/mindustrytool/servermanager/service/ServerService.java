@@ -681,14 +681,12 @@ public class ServerService {
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
                         // in bytes
-                        .withMemory(request.getInit().getPlan().getRam() * 1024 * 1024)
                         .withCpuPeriod(100000l)
                         .withCpuQuota((long) ((request.getInit().getPlan().getCpu() * 100000)))
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.unlessStoppedRestart())
                         .withAutoRemove(request.getInit().isAutoTurnOff())
-                        .withMemorySwap(request.getInit().getPlan().getRam() * 1024 * 1024l)
                         .withLogConfig(new LogConfig(LogConfig.LoggingType.JSON_FILE, Map.of(
                                 "max-size", "100m",
                                 "max-file", "5"//
@@ -710,6 +708,8 @@ public class ServerService {
         if (container == null) {
             return Mono.empty();
         }
+
+        var self = dockerService.getSelf();
 
         return Mono.zipDelayError(stats(serverId), getMods(serverId).collectList()).map(zip -> {
             var stats = zip.getT1();
@@ -796,6 +796,11 @@ public class ServerService {
             if (init.getPlan().getRam() != meta.getInit().getPlan().getRam()) {
                 result.add("Plan ram mismatch\ncurrent: " + meta.getInit().getPlan().getRam() + "\nexpected: "
                         + init.getPlan().getRam());
+            }
+
+            if (!self.getId().equals(meta.getServerManagerImageHash())) {
+                result.add("Server manager image mismatch\ncurrent: " + self.getId() + "\nexpected: "
+                        + meta.getServerManagerImageHash());
             }
 
             return result;
