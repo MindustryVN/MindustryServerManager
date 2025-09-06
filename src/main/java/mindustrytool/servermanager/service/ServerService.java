@@ -650,6 +650,7 @@ public class ServerService {
                 "-XX:+CrashOnOutOfMemoryError",
                 "-XX:NativeMemoryTracking=detail",
                 "-XX:+UnlockDiagnosticVMOptions",
+                "-XX:MaxRAM=" + request.getInit().getPlan().getRam() + "m",
                 "-Xmx" + (int) (request.getInit().getPlan().getRam() - 192) + "m");
 
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
@@ -681,12 +682,14 @@ public class ServerService {
                         .withPortBindings(portBindings)//
                         .withNetworkMode("mindustry-server")//
                         // in bytes
+                        .withMemory(request.getInit().getPlan().getRam() * 1024 * 1024)
                         .withCpuPeriod(100000l)
                         .withCpuQuota((long) ((request.getInit().getPlan().getCpu() * 100000)))
                         .withRestartPolicy(request.getInit().isAutoTurnOff()//
                                 ? RestartPolicy.noRestart()
                                 : RestartPolicy.unlessStoppedRestart())
                         .withAutoRemove(request.getInit().isAutoTurnOff())
+                        .withMemorySwap(request.getInit().getPlan().getRam() * 1024 * 1024l)
                         .withLogConfig(new LogConfig(LogConfig.LoggingType.JSON_FILE, Map.of(
                                 "max-size", "100m",
                                 "max-file", "5"//
