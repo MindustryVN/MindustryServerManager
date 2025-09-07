@@ -643,7 +643,7 @@ public class ServerService {
 
         List<String> args = List.of(
                 "-XX:MaxMetaspaceSize=128m",
-                "-XX:MaxDirectMemorySize=64m"
+                "-XX:MaxDirectMemorySize=64m",
                 "-XX:+UseContainerSupport",
                 "-XX:InitialRAMPercentage=70.0",
                 "-XX:MaxRAMPercentage=70.0",
