@@ -642,16 +642,17 @@ public class ServerService {
         exposedPorts.add(udp);
 
         List<String> args = List.of(
-                "-XX:MetaspaceSize=192m",
-                "-XX:MaxMetaspaceSize=192m",
+                "-XX:MaxMetaspaceSize=128m",
+                "-XX:MaxDirectMemorySize=64m"
                 "-XX:+UseContainerSupport",
                 "-XX:InitialRAMPercentage=70.0",
                 "-XX:MaxRAMPercentage=70.0",
                 "-XX:+CrashOnOutOfMemoryError",
                 "-XX:NativeMemoryTracking=detail",
                 "-XX:+UnlockDiagnosticVMOptions",
+                "-XX:+UseZGC",
                 "-XX:MaxRAM=" + request.getInit().getPlan().getRam() + "m",
-                "-Xmx" + (int) (request.getInit().getPlan().getRam() - 192) + "m");
+                "-Xmx" + (int) (request.getInit().getPlan().getRam() - 128) + "m");
 
         env.addAll(request.getInit().getEnv().entrySet().stream().map(v -> v.getKey() + "=" + v.getValue()).toList());
         env.add("IS_HUB=" + request.getInit().isHub());
