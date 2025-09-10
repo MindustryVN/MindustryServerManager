@@ -599,7 +599,8 @@ public class ServerService {
         }
 
         String serverId = request.getInit().getId().toString();
-        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config").toAbsolutePath()
+        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config")
+                .toAbsolutePath()
                 .toString();
 
         Volume volume = new Volume("/config");
