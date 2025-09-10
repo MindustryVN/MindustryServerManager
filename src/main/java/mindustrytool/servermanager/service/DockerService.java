@@ -15,6 +15,6 @@ public class DockerService {
     private final DockerClient dockerClient;
 
     public InspectImageResponse getSelf() {
-        return dockerClient.inspectImageCmd("ghcr.io/mindustryvn/mindustry-content-server").exec();
+        return dockerClient.inspectImageCmd("ghcr.io/mindustryvn/mindustry-server-manager").exec();
     }
 }
