@@ -599,12 +599,17 @@ public class ServerService {
         }
 
         String serverId = request.getInit().getId().toString();
-        String serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config")
-                .toAbsolutePath()
-                .toString();
+        var serverPath = Paths.get(Config.volumeFolderPath, "servers", serverId, "config")
+                .toAbsolutePath();
+
+        try {
+            Files.createDirectories(serverPath);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         Volume volume = new Volume("/config");
-        Bind bind = new Bind(serverPath, volume);
+        Bind bind = new Bind(serverPath.toString(), volume);
 
         ExposedPort tcp = ExposedPort.tcp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
         ExposedPort udp = ExposedPort.udp(Config.DEFAULT_MINDUSTRY_SERVER_PORT);
