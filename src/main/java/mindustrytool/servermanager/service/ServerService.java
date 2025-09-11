@@ -649,8 +649,7 @@ public class ServerService {
 
         List<String> args = List.of(
                 "-XX:+UseContainerSupport",
-                "-XX:InitialRAMPercentage=70.0",
-                "-XX:MaxRAMPercentage=70.0",
+                "-XX:MaxRAMPercentage=75.0",
                 "-XX:+CrashOnOutOfMemoryError",
                 "-XX:+UseSerialGC",
                 "-XX:+AlwaysPreTouch",
